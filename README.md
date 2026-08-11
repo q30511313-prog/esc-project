@@ -1,6 +1,6 @@
 # ESC Project
 
-This repository is for practicing GitHub workflows liek pull requests, code review, and commits.
+This repository is for practicing GitHub workflows like pull requests, code review, and commits.
 
 ## Getting Started
 
