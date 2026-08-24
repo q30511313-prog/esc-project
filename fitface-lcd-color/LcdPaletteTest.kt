@@ -1,5 +1,6 @@
 package dev.fitface.studio.core.format
 
+import dev.fitface.studio.core.model.LcdPalette
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
