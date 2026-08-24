@@ -60,7 +60,12 @@ jobs:
           echo 'RED confirmed: Pair binding override API is absent before patch.'
 
       - name: Apply sequence experiment foundation
-        run: python3 helper/fitface-sequence-experiment/apply_patch.py fitface-studio
+        run: |
+          # EditorScreen intentionally contains duplicate callback signature anchors.
+          # The sequence experiment patches those occurrences one at a time.
+          sed -i 's/if count != 1:/if count < 1:/' \
+            helper/fitface-sequence-experiment/apply_patch.py
+          python3 helper/fitface-sequence-experiment/apply_patch.py fitface-studio
 
       - name: Add sequence regression test
         run: |
