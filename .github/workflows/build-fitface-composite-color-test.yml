@@ -52,6 +52,8 @@ jobs:
             fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdPaletteTest.kt
           cp helper/fitface-lcd-color/CompositeColorOverrideTest.kt \
             fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CompositeColorOverrideTest.kt
+          cp helper/fitface-lcd-color/StaticRasterTintTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticRasterTintTest.kt
 
       - name: Apply sequence experiment foundation
         run: |
@@ -80,13 +82,14 @@ jobs:
           sed -i 's/applicationId = "dev.fitface.studio"/applicationId = "dev.fitface.studio.lcdcomposite"/' \
             fitface-studio/app/build.gradle.kts
 
-      - name: GREEN - run focused format regressions
+      - name: RED/GREEN - run focused format regressions
         working-directory: fitface-studio
         run: |
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
             --tests '*LcdSpriteTintTest*' \
             --tests '*LcdPaletteTest*' \
             --tests '*CompositeColorOverrideTest*' \
+            --tests '*StaticRasterTintTest*' \
             --tests '*SequenceOverrideTest*' \
             --tests '*PairBindingOverrideTest*'
 
