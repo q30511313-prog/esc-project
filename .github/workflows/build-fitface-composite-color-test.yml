@@ -34,10 +34,12 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
-      - name: Add composite color regression tests
+      - name: Add new regression tests only
         run: |
           cp helper/fitface-lcd-color/CompositeColorOverrideTest.kt \
             fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CompositeColorOverrideTest.kt
+          cp helper/fitface-lcd-color/LcdPaletteTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdPaletteTest.kt
 
       - name: RED - composite color editing must be absent upstream
         working-directory: fitface-studio
@@ -55,3 +57,20 @@ jobs:
           fi
           grep -q 'recolorCompositeWidgetAcrossStyles' /tmp/red-comp.log
           echo 'RED confirmed: composite color API is absent before implementation.'
+
+      - name: RED - approved LCD palette must be absent upstream
+        working-directory: fitface-studio
+        shell: bash
+        run: |
+          set +e
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*LcdPaletteTest*' > /tmp/red-palette.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/red-palette.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected palette test to fail before implementation.'
+            exit 1
+          fi
+          grep -q 'LcdPalette' /tmp/red-palette.log
+          echo 'RED confirmed: LcdPalette is absent before implementation.'
