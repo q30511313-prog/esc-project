@@ -5,9 +5,13 @@ appid='com.samsung.fit3watchface.sm_r390_0003'; suffix='GALAXYAPPSAPI'
 hv=base64.b64encode(hashlib.sha1((appid+suffix).encode('latin1')).digest()).decode()
 params={'csc':'NONE','sdkVer':'36','callerId':'com.samsung.wearable.fit3plugin','versionCode':'126071051','mcc':'450','mnc':'10','systemId':str(int(time.time()*1000)),'extuk':'','abiType':'64','deviceId':'SM-R390','loginType':'N','oneUiVersion':'0','cc':'KOR','pd':'0','appInfo':appid,'hashValue':hv}
 req=urllib.request.Request('https://vas.samsungapps.com/vas/stub/gearAppDownload.as?'+urllib.parse.urlencode(params),headers={'User-Agent':'Mozilla/5.0'})
-root=ET.fromstring(urllib.request.urlopen(req,timeout=30).read())
+xml=urllib.request.urlopen(req,timeout=30).read(); root=ET.fromstring(xml)
 vals={e.tag:(e.text or '').strip() for e in root.iter()}; dl=vals.get('downloadURI') or vals.get('downloadUri') or vals.get('downloadURL') or vals.get('downloadUrl')
-if not dl: raise SystemExit('no download URI')
+if not dl:
+    print('=== SAMSUNG RESPONSE WITHOUT DOWNLOAD URI ===')
+    print(xml.decode('utf-8','replace'))
+    print('TAGS', vals)
+    raise SystemExit(0)
 apk=urllib.request.urlopen(urllib.request.Request(dl,headers={'User-Agent':'Mozilla/5.0'}),timeout=60).read()
 z=zipfile.ZipFile(io.BytesIO(apk)); members=[n for n in z.namelist() if n.endswith('SM-R390_00003_256x402.bin')]
 if len(members)!=1: raise SystemExit(f'container member count {len(members)}')
