@@ -161,6 +161,42 @@ replace_in_function(
 ''',
 )
 
+# Kotlin's when expression must return EditorSnapshot from every branch because
+# operate{} is typed that way. The preceding type guard is not enough for exhaustiveness.
+# Add an explicit impossible branch without altering either raster recolor path.
+vm = "feature/editor/src/main/kotlin/dev/fitface/studio/feature/editor/EditorViewModel.kt"
+replace_in_function(
+    vm,
+    "setSelectedSpriteLcdSilver",
+    '''                3 -> repository.recolorSpriteWidget(
+                    styleName = snapshot.selectedStyle,
+                    globalIndex = selected.globalIndex,
+                    sequenceId = selected.sequenceId,
+                    x = selected.x,
+                    y = selected.y,
+                    red = LcdPalette.SILVER_RED,
+                    green = LcdPalette.SILVER_GREEN,
+                    blue = LcdPalette.SILVER_BLUE,
+                    applyToAllStyles = mutableState.value.applyWidgetEditsToAllStyles,
+                )
+            }
+''',
+    '''                3 -> repository.recolorSpriteWidget(
+                    styleName = snapshot.selectedStyle,
+                    globalIndex = selected.globalIndex,
+                    sequenceId = selected.sequenceId,
+                    x = selected.x,
+                    y = selected.y,
+                    red = LcdPalette.SILVER_RED,
+                    green = LcdPalette.SILVER_GREEN,
+                    blue = LcdPalette.SILVER_BLUE,
+                    applyToAllStyles = mutableState.value.applyWidgetEditsToAllStyles,
+                )
+                else -> throw IllegalStateException("Selected widget has no raster LCD tint")
+            }
+''',
+)
+
 # User-approved final Casio reference color. Palette values come from LcdPalette;
 # this only keeps the inspector label truthful.
 ui = root / "feature/editor/src/main/kotlin/dev/fitface/studio/feature/editor/EditorScreen.kt"
