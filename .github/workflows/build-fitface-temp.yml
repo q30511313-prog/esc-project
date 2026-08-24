@@ -1,0 +1,109 @@
+name: Temporary FitFace Sequence Experiment
+
+on:
+  push:
+    branches:
+      - tmp-fitface-build
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out experiment helper
+        uses: actions/checkout@v4
+        with:
+          ref: tmp-fitface-build
+          path: helper
+
+      - name: Check out FitFace Studio upstream
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Add sequence override test
+        run: |
+          cp helper/fitface-sequence-experiment/SequenceOverrideTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/SequenceOverrideTest.kt
+
+      - name: RED - prove test fails before implementation
+        working-directory: fitface-studio
+        shell: bash
+        run: |
+          set +e
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*SequenceOverrideTest*' > /tmp/red.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/red.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected the new sequence override test to fail before implementation.'
+            exit 1
+          fi
+          grep -q 'overrideWidgetSequenceAcrossStyles' /tmp/red.log
+          echo 'RED confirmed: API is absent before patch.'
+
+      - name: Apply experimental implementation
+        run: |
+          # The UI file intentionally contains two identical callback signature anchors;
+          # let the patcher consume them one at a time.
+          sed -i 's/if count != 1:/if count < 1:/' helper/fitface-sequence-experiment/apply_patch.py
+          python3 helper/fitface-sequence-experiment/apply_patch.py fitface-studio
+
+      - name: Give experiment a unique application ID
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('fitface-studio/app/build.gradle.kts')
+          text = p.read_text()
+          old = 'applicationId = "dev.fitface.studio"'
+          new = 'applicationId = "dev.fitface.studio.seqtest"'
+          if text.count(old) != 1:
+              raise SystemExit('applicationId patch anchor changed')
+          p.write_text(text.replace(old, new, 1))
+          PY
+          grep -q 'applicationId = "dev.fitface.studio.seqtest"' fitface-studio/app/build.gradle.kts
+
+      - name: GREEN - run sequence override format tests
+        working-directory: fitface-studio
+        run: |
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*SequenceOverrideTest*'
+
+      - name: Regression - run editor unit tests
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :feature:editor:testDebugUnitTest
+
+      - name: Build experimental debug APK
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Verify APK exists
+        working-directory: fitface-studio
+        run: |
+          test -f app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee /tmp/apk.sha256
+
+      - name: Upload experimental APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitface-studio-sequence-experiment-side-by-side-debug
+          path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

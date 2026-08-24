@@ -1,0 +1,57 @@
+name: Temporary FitFace Composite Color Experiment
+
+on:
+  push:
+    branches:
+      - tmp-fitface-build
+
+permissions:
+  contents: read
+
+jobs:
+  red:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out helper
+        uses: actions/checkout@v4
+        with:
+          ref: tmp-fitface-build
+          path: helper
+
+      - name: Check out FitFace Studio upstream
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Add composite color regression tests
+        run: |
+          cp helper/fitface-lcd-color/CompositeColorOverrideTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CompositeColorOverrideTest.kt
+
+      - name: RED - composite color editing must be absent upstream
+        working-directory: fitface-studio
+        shell: bash
+        run: |
+          set +e
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*CompositeColorOverrideTest*' > /tmp/red-comp.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/red-comp.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected composite color test to fail before implementation.'
+            exit 1
+          fi
+          grep -q 'recolorCompositeWidgetAcrossStyles' /tmp/red-comp.log
+          echo 'RED confirmed: composite color API is absent before implementation.'

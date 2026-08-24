@@ -1,0 +1,103 @@
+name: Temporary FitFace Opaque Sprite Experiment
+
+on:
+  push:
+    branches:
+      - tmp-fitface-build
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out experiment helper
+        uses: actions/checkout@v4
+        with:
+          ref: tmp-fitface-build
+          path: helper
+
+      - name: Check out FitFace Studio upstream
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Add opaque RGB565 resize regression test
+        run: |
+          cp helper/fitface-opaque-sprite/OpaqueRgb565ResizeTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/OpaqueRgb565ResizeTest.kt
+
+      - name: RED - prove opaque RGB565 resize is absent upstream
+        working-directory: fitface-studio
+        shell: bash
+        run: |
+          set +e
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*OpaqueRgb565ResizeTest*' > /tmp/red-sprite.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/red-sprite.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected the new opaque RGB565 resize test to fail before implementation.'
+            exit 1
+          fi
+          grep -q 'nearestRgb565Opaque' /tmp/red-sprite.log
+          echo 'RED confirmed: opaque RGB565 resampler API is absent before patch.'
+
+      - name: Apply opaque RGB565 Sprite resize implementation
+        run: python3 helper/fitface-opaque-sprite/apply_patch.py fitface-studio
+
+      - name: Give experiment a unique application ID
+        run: |
+          sed -i 's/applicationId = "dev.fitface.studio"/applicationId = "dev.fitface.studio.spritetest"/' \
+            fitface-studio/app/build.gradle.kts
+
+      - name: GREEN - run opaque RGB565 resize test
+        working-directory: fitface-studio
+        run: |
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*OpaqueRgb565ResizeTest*'
+
+      - name: Regression - run existing Sprite resize tests
+        working-directory: fitface-studio
+        run: |
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*SpriteResizeFidelityTest*' \
+            --tests '*SharedFrameResizeTest*'
+
+      - name: Regression - run editor unit tests
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :feature:editor:testDebugUnitTest
+
+      - name: Build opaque Sprite experimental debug APK
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Verify APK exists and package marker is built
+        working-directory: fitface-studio
+        run: |
+          test -f app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee /tmp/apk.sha256
+
+      - name: Upload opaque Sprite experimental APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitface-studio-opaque-sprite-resize-debug
+          path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7

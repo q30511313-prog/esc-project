@@ -1,0 +1,71 @@
+name: Temporary Fit3 Catalogue Scan
+
+on:
+  push:
+    branches:
+      - tmp-fitface-build
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch Fit3 catalogue XML
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import urllib.parse, urllib.request, pathlib
+          base='https://vas.samsungapps.com/vas/product/getContentCategoryProductList.as'
+          params={
+            'imgWidth':'216','imgHeight':'432','startNum':'1','endNum':'100','status':'1',
+            'cc':'KOR','extraInfo':'screenshot','callerId':'com.samsung.wearable.fit3plugin',
+            'locale':'en_US','alignOrder':'recent','contentCategoryID':'0000004252',
+            'mcc':'450','mnc':'10','csc':'NONE','deviceId':'SM-R390','sdkVer':'36','pd':'0'
+          }
+          url=base+'?'+urllib.parse.urlencode(params)
+          req=urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+          with urllib.request.urlopen(req, timeout=30) as r:
+            data=r.read()
+          pathlib.Path('fit3_catalog.xml').write_bytes(data)
+          print('catalog bytes', len(data))
+          print(data[:1000].decode('utf-8','replace'))
+          PY
+
+      - name: Summarize catalogue tags and URLs
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET, json
+          raw=Path('fit3_catalog.xml').read_bytes()
+          root=ET.fromstring(raw)
+          tags={}
+          urls=[]
+          for e in root.iter():
+            tag=e.tag.split('}')[-1]
+            tags[tag]=tags.get(tag,0)+1
+            t=(e.text or '').strip()
+            if t.startswith('http://') or t.startswith('https://'):
+              urls.append((tag,t))
+          Path('tags.json').write_text(json.dumps(tags,indent=2,ensure_ascii=False))
+          Path('urls.txt').write_text('\n'.join(f'{tag}\t{url}' for tag,url in urls))
+          print('top tags', sorted(tags.items(), key=lambda x:-x[1])[:40])
+          print('url count', len(urls))
+          print('\n'.join(f'{tag}\t{url}' for tag,url in urls[:40]))
+          PY
+
+      - name: Upload catalogue scan
+        uses: actions/upload-artifact@v4
+        with:
+          name: fit3-catalogue-scan
+          path: |
+            fit3_catalog.xml
+            tags.json
+            urls.txt
+          if-no-files-found: error
+          retention-days: 7
