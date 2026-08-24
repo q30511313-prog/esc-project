@@ -13,13 +13,34 @@ def replace(path: str, old: str, new: str) -> None:
         raise SystemExit(f"{path}: expected one patch anchor, found {count}")
     p.write_text(text.replace(old, new, 1))
 
+
+def replace_in_function(path: str, function_name: str, old: str, new: str) -> None:
+    p = root / path
+    text = p.read_text()
+    marker = f"    fun {function_name}("
+    start = text.find(marker)
+    if start < 0:
+        raise SystemExit(f"{path}: function {function_name} not found")
+    next_fun = text.find("\n    fun ", start + len(marker))
+    end = len(text) if next_fun < 0 else next_fun
+    block = text[start:end]
+    count = block.count(old)
+    if count != 1:
+        raise SystemExit(
+            f"{path}:{function_name}: expected one patch anchor, found {count}"
+        )
+    block = block.replace(old, new, 1)
+    p.write_text(text[:start] + block + text[end:])
+
 editor = "core/format/src/main/kotlin/dev/fitface/studio/core/format/FaceEditor.kt"
 
 # VALUE/type-5: right-anchored records are stored with a negative far-edge X while
 # the editor shows the drawn/display X. Match by stable record identity, never by
-# geometry from two different coordinate spaces.
-replace(
+# geometry from two different coordinate spaces. Restrict this to recolor only so
+# the already-working Pair binding experiment stays untouched.
+replace_in_function(
     editor,
+    "recolorPairWidgetAcrossStyles",
     '''            records.singleOrNull {
                 it.globalIndex == globalIndex &&
                     it.widgetType == WIDGET_PAIR &&
@@ -36,7 +57,7 @@ replace(
 ''',
 )
 
-# COMPOSITE/type-13: the hardware-tested format evidence pins the theme color to
+# COMPOSITE/type-13: hardware format evidence pins the theme color to
 # record +0x58 = words[13]. Do not guess by scanning for ARGB-looking words.
 records = "core/format/src/main/kotlin/dev/fitface/studio/core/format/FaceRecords.kt"
 replace(
@@ -68,8 +89,9 @@ replace(
 ''',
 )
 
-replace(
+replace_in_function(
     editor,
+    "recolorCompositeWidgetAcrossStyles",
     '''        fun colorWordIndex(record: WidgetRecord): Int? {
             val candidates = record.words.mapIndexedNotNull { index, word ->
                 index.takeIf {
@@ -90,8 +112,9 @@ replace(
         }
 ''',
 )
-replace(
+replace_in_function(
     editor,
+    "recolorCompositeWidgetAcrossStyles",
     '''            records.singleOrNull {
                 it.globalIndex == globalIndex &&
                     it.widgetType == WIDGET_COMP &&
@@ -107,8 +130,9 @@ replace(
             }
 ''',
 )
-replace(
+replace_in_function(
     editor,
+    "recolorCompositeWidgetAcrossStyles",
     '''                "Composite widget does not expose exactly one explicit opaque color word",
 ''',
     '''                "Composite widget does not expose an opaque color at record +0x58",
@@ -116,10 +140,11 @@ replace(
 )
 
 # IMAGE/type-1: keep the raster tint implementation, but identify the selected record
-# by stable identity just like VALUE. The raster itself is still target.unknown20 and
-# only its RGB565 sample bytes are modified.
-replace(
+# by stable identity. The actual raster pointer remains target.unknown20 and only its
+# RGB565 sample bytes are modified.
+replace_in_function(
     editor,
+    "recolorStaticWidgetAcrossStyles",
     '''            records.singleOrNull {
                 it.globalIndex == globalIndex &&
                     it.widgetType == WIDGET_STATIC &&
