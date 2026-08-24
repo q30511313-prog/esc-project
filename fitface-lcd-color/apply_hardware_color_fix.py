@@ -13,11 +13,11 @@ def replace(path: str, old: str, new: str) -> None:
         raise SystemExit(f"{path}: expected one patch anchor, found {count}")
     p.write_text(text.replace(old, new, 1))
 
-# Pair/Value: the widget list exposes right-anchored Pair records in display-space
-# coordinates, while the binary stores a negative right-edge inset. Color edits must
-# identify the selected record by stable global index/type/sequence, not compare those
-# two different coordinate spaces.
 editor = "core/format/src/main/kotlin/dev/fitface/studio/core/format/FaceEditor.kt"
+
+# VALUE/type-5: right-anchored records are stored with a negative far-edge X while
+# the editor shows the drawn/display X. Match by stable record identity, never by
+# geometry from two different coordinate spaces.
 replace(
     editor,
     '''            records.singleOrNull {
@@ -36,8 +36,8 @@ replace(
 ''',
 )
 
-# Composite color is not "whichever word looks like ARGB". The independently derived
-# format and Samsung's own style variants pin it to record +0x58 = words[13].
+# COMPOSITE/type-13: the hardware-tested format evidence pins the theme color to
+# record +0x58 = words[13]. Do not guess by scanning for ARGB-looking words.
 records = "core/format/src/main/kotlin/dev/fitface/studio/core/format/FaceRecords.kt"
 replace(
     records,
@@ -64,7 +64,7 @@ replace(
             } else {
                 null
             }
-            val canEditComposite = compositeColor != null
+            val canEditComposite = it.widgetType == WIDGET_COMP && compositeColor != null
 ''',
 )
 
@@ -115,4 +115,31 @@ replace(
 ''',
 )
 
-print("hardware Pair anchor + exact Composite +0x58 color fixes applied")
+# IMAGE/type-1: keep the raster tint implementation, but identify the selected record
+# by stable identity just like VALUE. The raster itself is still target.unknown20 and
+# only its RGB565 sample bytes are modified.
+replace(
+    editor,
+    '''            records.singleOrNull {
+                it.globalIndex == globalIndex &&
+                    it.widgetType == WIDGET_STATIC &&
+                    it.sequenceId == sequenceId &&
+                    it.x == x &&
+                    it.y == y
+            }
+''',
+    '''            records.singleOrNull {
+                it.globalIndex == globalIndex &&
+                    it.widgetType == WIDGET_STATIC &&
+                    it.sequenceId == sequenceId
+            }
+''',
+)
+
+# User-approved final Casio reference color. Palette values come from LcdPalette;
+# this only keeps the inspector label truthful.
+ui = root / "feature/editor/src/main/kotlin/dev/fitface/studio/feature/editor/EditorScreen.kt"
+text = ui.read_text().replace("LCD Silver #AEB4B2", "LCD Gray #9F9E99")
+ui.write_text(text)
+
+print("hardware VALUE/COMPOSITE/IMAGE color fixes applied")
