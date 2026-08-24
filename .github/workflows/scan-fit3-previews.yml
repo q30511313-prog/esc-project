@@ -1,0 +1,90 @@
+name: Temporary Fit3 Preview Contact Sheets
+
+on:
+  push:
+    branches:
+      - tmp-fitface-build
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  previews:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install Pillow
+        run: python3 -m pip install --quiet pillow
+
+      - name: Fetch catalogue, previews, and build contact sheets
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import urllib.parse, urllib.request, pathlib, xml.etree.ElementTree as ET, re, csv, io
+          from PIL import Image, ImageDraw, ImageFont, ImageOps
+
+          out=pathlib.Path('out'); (out/'previews').mkdir(parents=True, exist_ok=True)
+          base='https://vas.samsungapps.com/vas/product/getContentCategoryProductList.as'
+          params={'imgWidth':'216','imgHeight':'432','startNum':'1','endNum':'100','status':'1','cc':'KOR',
+                  'extraInfo':'screenshot','callerId':'com.samsung.wearable.fit3plugin','locale':'en_US',
+                  'alignOrder':'recent','contentCategoryID':'0000004252','mcc':'450','mnc':'10','csc':'NONE',
+                  'deviceId':'SM-R390','sdkVer':'36','pd':'0'}
+          url=base+'?'+urllib.parse.urlencode(params)
+          req=urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+          raw=urllib.request.urlopen(req, timeout=30).read()
+          (out/'fit3_catalog.xml').write_bytes(raw)
+          root=ET.fromstring(raw)
+          faces=[]
+          for app in root.findall('.//appInfo'):
+              def txt(tag):
+                  e=app.find(tag); return (e.text or '').strip() if e is not None else ''
+              appid=txt('appId'); m=re.search(r'_(\d{4})$', appid)
+              if not m: continue
+              fid=m.group(1)
+              name=txt('productName')
+              image_url=txt('screenShotImgURL') or txt('iconImgURL')
+              if image_url:
+                  faces.append((fid,name,image_url,appid))
+          print('faces',len(faces))
+          rows=[]
+          for i,(fid,name,image_url,appid) in enumerate(faces):
+              try:
+                  req=urllib.request.Request(image_url, headers={'User-Agent':'Mozilla/5.0'})
+                  data=urllib.request.urlopen(req, timeout=30).read()
+                  img=Image.open(io.BytesIO(data)).convert('RGB')
+                  p=out/'previews'/f'{i:03d}_{fid}.jpg'; img.save(p, quality=92)
+                  rows.append((i,fid,name,image_url,appid,str(p)))
+              except Exception as e:
+                  print('preview failed',fid,name,e)
+          with open(out/'faces.csv','w',newline='',encoding='utf-8') as f:
+              w=csv.writer(f); w.writerow(['catalog_index','face_id','name','preview_url','app_id','file']); w.writerows(rows)
+
+          cols, rows_per_sheet = 5, 5
+          tile_w,tile_h=220,440
+          font=ImageFont.load_default()
+          for page,start in enumerate(range(0,len(rows),cols*rows_per_sheet),1):
+              subset=rows[start:start+cols*rows_per_sheet]
+              sheet=Image.new('RGB',(cols*tile_w,rows_per_sheet*tile_h),'white')
+              d=ImageDraw.Draw(sheet)
+              for j,row in enumerate(subset):
+                  idx,fid,name,image_url,appid,file=row
+                  im=Image.open(file).convert('RGB')
+                  im.thumbnail((190,365),Image.Resampling.LANCZOS)
+                  x=(j%cols)*tile_w; y=(j//cols)*tile_h
+                  ox=x+(tile_w-im.width)//2; oy=y+28
+                  sheet.paste(im,(ox,oy))
+                  label=f'#{fid}  {name}'
+                  d.text((x+6,y+6),label,fill='black',font=font)
+                  d.text((x+6,y+408),f'catalog {idx+1}',fill='black',font=font)
+              sheet.save(out/f'contact_sheet_{page}.png')
+          PY
+
+      - name: Upload preview contact sheets
+        uses: actions/upload-artifact@v4
+        with:
+          name: fit3-preview-contact-sheets
+          path: out
+          if-no-files-found: error
+          retention-days: 7
