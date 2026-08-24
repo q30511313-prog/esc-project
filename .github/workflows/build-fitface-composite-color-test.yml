@@ -42,32 +42,23 @@ jobs:
 
       - name: Install LCD helpers and regression tests
         run: |
-          cp helper/fitface-lcd-color/SpriteTint.kt \
-            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/SpriteTint.kt
-          cp helper/fitface-lcd-color/LcdPalette.kt \
-            fitface-studio/core/model/src/main/kotlin/dev/fitface/studio/core/model/LcdPalette.kt
-          cp helper/fitface-lcd-color/LcdSpriteTintTest.kt \
-            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdSpriteTintTest.kt
-          cp helper/fitface-lcd-color/LcdPaletteTest.kt \
-            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdPaletteTest.kt
-          cp helper/fitface-lcd-color/CompositeColorOverrideTest.kt \
-            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CompositeColorOverrideTest.kt
-          cp helper/fitface-lcd-color/StaticRasterTintTest.kt \
-            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticRasterTintTest.kt
+          cp helper/fitface-lcd-color/SpriteTint.kt fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/SpriteTint.kt
+          cp helper/fitface-lcd-color/LcdPalette.kt fitface-studio/core/model/src/main/kotlin/dev/fitface/studio/core/model/LcdPalette.kt
+          cp helper/fitface-lcd-color/LcdSpriteTintTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdSpriteTintTest.kt
+          cp helper/fitface-lcd-color/LcdPaletteTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdPaletteTest.kt
+          cp helper/fitface-lcd-color/CompositeColorOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CompositeColorOverrideTest.kt
+          cp helper/fitface-lcd-color/StaticRasterTintTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticRasterTintTest.kt
 
       - name: Apply sequence experiment foundation
         run: |
-          sed -i 's/if count != 1:/if count < 1:/' \
-            helper/fitface-sequence-experiment/apply_patch.py
+          sed -i 's/if count != 1:/if count < 1:/' helper/fitface-sequence-experiment/apply_patch.py
           python3 helper/fitface-sequence-experiment/apply_patch.py fitface-studio
-          cp helper/fitface-sequence-experiment/SequenceOverrideTest.kt \
-            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/SequenceOverrideTest.kt
+          cp helper/fitface-sequence-experiment/SequenceOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/SequenceOverrideTest.kt
 
       - name: Apply Pair binding experiment
         run: |
           python3 helper/fitface-pair-binding/apply_patch.py fitface-studio
-          cp helper/fitface-pair-binding/PairBindingOverrideTest.kt \
-            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/PairBindingOverrideTest.kt
+          cp helper/fitface-pair-binding/PairBindingOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/PairBindingOverrideTest.kt
 
       - name: Apply Sprite and Pair LCD controls
         run: |
@@ -77,12 +68,14 @@ jobs:
       - name: Apply cooler LCD palette and Composite color control
         run: python3 helper/fitface-lcd-color/apply_composite_color_patch.py fitface-studio
 
+      - name: Apply type-1 Static image raster color control
+        run: python3 helper/fitface-lcd-color/apply_static_color_patch.py fitface-studio
+
       - name: Give integrated experiment a unique application ID
         run: |
-          sed -i 's/applicationId = "dev.fitface.studio"/applicationId = "dev.fitface.studio.lcdcomposite"/' \
-            fitface-studio/app/build.gradle.kts
+          sed -i 's/applicationId = "dev.fitface.studio"/applicationId = "dev.fitface.studio.lcdcomposite"/' fitface-studio/app/build.gradle.kts
 
-      - name: RED/GREEN - run focused format regressions
+      - name: GREEN - run focused format regressions
         working-directory: fitface-studio
         run: |
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
