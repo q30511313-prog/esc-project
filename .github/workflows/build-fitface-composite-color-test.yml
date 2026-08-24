@@ -3,7 +3,7 @@ name: Temporary FitFace Composite Color Experiment
 on:
   push:
     branches:
-      - tmp-fitface-build
+      - tmp-fitface-composite
 
 permissions:
   contents: read
@@ -15,7 +15,7 @@ jobs:
       - name: Check out helper
         uses: actions/checkout@v4
         with:
-          ref: tmp-fitface-build
+          ref: tmp-fitface-composite
           path: helper
 
       - name: Check out FitFace Studio upstream
