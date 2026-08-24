@@ -9,8 +9,10 @@ def replace(path: str, old: str, new: str) -> None:
     p = root / path
     text = p.read_text()
     count = text.count(old)
-    if count != 1:
-        raise SystemExit(f"{path}: expected one patch anchor, found {count}")
+    # Some UI callback signatures intentionally occur more than once. Each patch call
+    # consumes the first remaining occurrence, so only absence is an error.
+    if count < 1:
+        raise SystemExit(f"{path}: expected patch anchor, found {count}")
     p.write_text(text.replace(old, new, 1))
 
 # 1) Format layer: change only the low byte of Pair words[1], which the independent
