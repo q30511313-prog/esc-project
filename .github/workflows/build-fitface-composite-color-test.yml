@@ -21,6 +21,9 @@ jobs:
           ref: tmp-fitface-composite
           path: helper
 
+      - name: Inspect stock face non-sprite color sources
+        run: python3 helper/fitface-lcd-color/inspect_nonsprite.py
+
       - name: Check out FitFace Studio upstream
         uses: actions/checkout@v4
         with:
