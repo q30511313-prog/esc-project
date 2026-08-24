@@ -23,12 +23,12 @@ class AnchoredPairColorTest {
             sequenceId = before.sequenceId,
             x = 17,
             y = 68,
-            colorArgb = 0xFFAEB4B2.toInt(),
+            colorArgb = 0xFF9F9E99.toInt(),
         )
         val after = FaceRecordParser.scanWidgets(edit.container.entryByBasename("style3.bin")).single()
         assertEquals(-174, after.x)
         assertEquals(68, after.y)
-        assertEquals(0xFFAEB4B2L, after.words[0])
+        assertEquals(0xFF9F9E99L, after.words[0])
         assertTrue(edit.container.validate().isValid)
     }
 
