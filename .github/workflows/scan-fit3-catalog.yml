@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - tmp-fitface-build
+  pull_request:
+    branches:
+      - master
 
 permissions:
   contents: read
@@ -38,7 +41,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import xml.etree.ElementTree as ET, re, json
+          import xml.etree.ElementTree as ET, json
           raw=Path('fit3_catalog.xml').read_bytes()
           root=ET.fromstring(raw)
           tags={}
