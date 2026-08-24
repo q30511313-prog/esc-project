@@ -1,0 +1,105 @@
+name: Temporary FitFace Pair Binding Experiment
+
+on:
+  push:
+    branches:
+      - tmp-fitface-build
+  pull_request:
+    branches:
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out experiment helper
+        uses: actions/checkout@v4
+        with:
+          ref: tmp-fitface-build
+          path: helper
+
+      - name: Check out FitFace Studio upstream
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Add Pair binding regression test
+        run: |
+          cp helper/fitface-pair-binding/PairBindingOverrideTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/PairBindingOverrideTest.kt
+
+      - name: RED - prove Pair binding override is absent upstream
+        working-directory: fitface-studio
+        shell: bash
+        run: |
+          set +e
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*PairBindingOverrideTest*' > /tmp/red-binding.log 2>&1
+          status=$?
+          set -e
+          cat /tmp/red-binding.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected Pair binding test to fail before implementation.'
+            exit 1
+          fi
+          grep -q 'overridePairBindingAcrossStyles' /tmp/red-binding.log
+          echo 'RED confirmed: Pair binding override API is absent before patch.'
+
+      - name: Apply sequence experiment foundation
+        run: python3 helper/fitface-sequence-experiment/apply_patch.py fitface-studio
+
+      - name: Add sequence regression test
+        run: |
+          cp helper/fitface-sequence-experiment/SequenceOverrideTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/SequenceOverrideTest.kt
+
+      - name: Apply Pair binding implementation
+        run: python3 helper/fitface-pair-binding/apply_patch.py fitface-studio
+
+      - name: Give experiment a unique application ID
+        run: |
+          sed -i 's/applicationId = "dev.fitface.studio"/applicationId = "dev.fitface.studio.bindingtest"/' \
+            fitface-studio/app/build.gradle.kts
+
+      - name: GREEN - run Pair binding and sequence tests
+        working-directory: fitface-studio
+        run: |
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*PairBindingOverrideTest*' \
+            --tests '*SequenceOverrideTest*'
+
+      - name: Regression - run editor unit tests
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :feature:editor:testDebugUnitTest
+
+      - name: Build Pair binding experimental debug APK
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Verify APK exists
+        working-directory: fitface-studio
+        run: |
+          test -f app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee /tmp/apk.sha256
+
+      - name: Upload Pair binding experimental APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitface-studio-pair-binding-debug
+          path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
