@@ -49,6 +49,7 @@ jobs:
           cp helper/fitface-lcd-color/CompositeColorOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CompositeColorOverrideTest.kt
           cp helper/fitface-lcd-color/StaticRasterTintTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticRasterTintTest.kt
           cp helper/fitface-lcd-color/AnchoredPairColorTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/AnchoredPairColorTest.kt
+          cp helper/fitface-lcd-color/DuplicateSequencePairColorTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/DuplicateSequencePairColorTest.kt
 
       - name: Apply sequence experiment foundation
         run: |
@@ -87,6 +88,7 @@ jobs:
             --tests '*CompositeColorOverrideTest*' \
             --tests '*StaticRasterTintTest*' \
             --tests '*AnchoredPairColorTest*' \
+            --tests '*DuplicateSequencePairColorTest*' \
             --tests '*SequenceOverrideTest*' \
             --tests '*PairBindingOverrideTest*'
 
