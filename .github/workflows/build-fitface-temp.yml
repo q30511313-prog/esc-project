@@ -66,6 +66,20 @@ jobs:
           sed -i 's/if count != 1:/if count < 1:/' helper/fitface-sequence-experiment/apply_patch.py
           python3 helper/fitface-sequence-experiment/apply_patch.py fitface-studio
 
+      - name: Give experiment a unique application ID
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('fitface-studio/app/build.gradle.kts')
+          text = p.read_text()
+          old = 'applicationId = "dev.fitface.studio"'
+          new = 'applicationId = "dev.fitface.studio.seqtest"'
+          if text.count(old) != 1:
+              raise SystemExit('applicationId patch anchor changed')
+          p.write_text(text.replace(old, new, 1))
+          PY
+          grep -q 'applicationId = "dev.fitface.studio.seqtest"' fitface-studio/app/build.gradle.kts
+
       - name: GREEN - run sequence override format tests
         working-directory: fitface-studio
         run: |
@@ -89,7 +103,7 @@ jobs:
       - name: Upload experimental APK
         uses: actions/upload-artifact@v4
         with:
-          name: fitface-studio-sequence-experiment-debug
+          name: fitface-studio-sequence-experiment-side-by-side-debug
           path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
