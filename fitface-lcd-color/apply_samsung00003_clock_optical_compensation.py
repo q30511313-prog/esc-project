@@ -47,14 +47,11 @@ def replace_in_private_function(function_name: str, old: str, new: str, expected
     text = text[:start] + block + text[end:]
 
 
-# Real-watch photos show Samsung 00003 style3's RGB565 clock path rendering about
-# five percent bluer than its VALUE/COMPOSITE ARGB text even when both receive the
-# same requested #B8B8AD. Keep the user's canonical ARGB request intact and warm
-# only the proven style3 clock raster path to B8/B8/A5.
-#
-# The full-foreground signature is deliberate: it narrows this calibration to the
-# actual dashboard schema and leaves minimal clock-only fixtures / unrelated faces
-# on the ordinary color transform.
+# The logical/user-facing Casio tone remains #B8B8AD. Real Fit3 captures show
+# that this neutral input is emitted as lavender: Green is suppressed while Blue
+# is elevated. For only the proven Samsung 00003 black style, apply the inverse
+# optical payload #B8C794. Other faces, styles, and requested colors stay on the
+# ordinary transform. RGB565 quantizes the calibrated payload to 0xB631.
 replace_in_function(
     "recolorSpriteWidgetAcrossStyles",
     '''            val background = FaceRecordParser.backgroundImage(entry)?.index
@@ -68,40 +65,47 @@ replace_in_function(
                     it.widgetType == WIDGET_COMP &&
                         it.words.getOrNull(13)?.ushr(24) == 0xFFL
                 }
-            val opticalClockBlue = if (
+            val useFit3OpticalCalibration =
                 entry.basename == "style3.bin" &&
-                entry.path.contains("/SM-R390_00003_256x402/") &&
-                clockSprites != null &&
-                hasSamsung00003ForegroundSignature &&
-                red == 0xB8 &&
-                green == 0xB8 &&
-                blue == 0xAD
-            ) {
-                0xA5
-            } else {
-                blue
-            }
+                    entry.path.contains("/SM-R390_00003_256x402/") &&
+                    clockSprites != null &&
+                    hasSamsung00003ForegroundSignature &&
+                    red == 0xB8 &&
+                    green == 0xB8 &&
+                    blue == 0xAD
+            val opticalClockRed = if (useFit3OpticalCalibration) 0xB8 else red
+            val opticalClockGreen = if (useFit3OpticalCalibration) 0xC7 else green
+            val opticalClockBlue = if (useFit3OpticalCalibration) 0x94 else blue
             val background = FaceRecordParser.backgroundImage(entry)?.index
 ''',
 )
 replace_in_function(
     "recolorSpriteWidgetAcrossStyles",
-    '''                            targetBlue = blue,
+    '''                            targetRed = red,
+                            targetGreen = green,
+                            targetBlue = blue,
 ''',
-    '''                            targetBlue = opticalClockBlue,
+    '''                            targetRed = opticalClockRed,
+                            targetGreen = opticalClockGreen,
+                            targetBlue = opticalClockBlue,
 ''',
 )
 replace_in_function(
     "recolorSpriteWidgetAcrossStyles",
     '''                        SpriteTint.tintRgb565(existing, red, green, blue)
 ''',
-    '''                        SpriteTint.tintRgb565(existing, red, green, opticalClockBlue)
+    '''                        SpriteTint.tintRgb565(
+                            existing,
+                            opticalClockRed,
+                            opticalClockGreen,
+                            opticalClockBlue,
+                        )
 ''',
 )
 
-# The two colon rasters and the three separator bars share the RGB565 display path.
-# Apply the same renderer-specific blue compensation there, while the targetArgb
-# block below intentionally continues to use the original requested blue (0xAD).
+# The two colon rasters and the three separator bars use RGB565 as well. VALUE /
+# COMPOSITE foreground words are ARGB, but the same inverse optical payload must
+# be encoded there too so every renderer path converges perceptually on one tone.
 replace_in_private_function(
     "tintSamsung00003CasioClockChrome",
     '''        val imagesByRelativeOffset = images.associateBy {
@@ -120,41 +124,68 @@ replace_in_private_function(
                 it.widgetType == WIDGET_COMP &&
                     it.words.getOrNull(13)?.ushr(24) == 0xFFL
             }
-        val opticalClockBlue = if (
+        val useFit3OpticalCalibration =
             entry.basename == "style3.bin" &&
-            entry.path.contains("/SM-R390_00003_256x402/") &&
-            hasSamsung00003ForegroundSignature &&
-            red == 0xB8 &&
-            green == 0xB8 &&
-            blue == 0xAD
-        ) {
-            0xA5
-        } else {
-            blue
-        }
+                entry.path.contains("/SM-R390_00003_256x402/") &&
+                hasSamsung00003ForegroundSignature &&
+                red == 0xB8 &&
+                green == 0xB8 &&
+                blue == 0xAD
+        val opticalClockRed = if (useFit3OpticalCalibration) 0xB8 else red
+        val opticalClockGreen = if (useFit3OpticalCalibration) 0xC7 else green
+        val opticalClockBlue = if (useFit3OpticalCalibration) 0x94 else blue
 ''',
 )
 replace_in_private_function(
     "tintSamsung00003CasioClockChrome",
-    '''                    targetBlue = blue,
+    '''                    targetRed = red,
+                    targetGreen = green,
+                    targetBlue = blue,
 ''',
-    '''                    targetBlue = opticalClockBlue,
+    '''                    targetRed = opticalClockRed,
+                    targetGreen = opticalClockGreen,
+                    targetBlue = opticalClockBlue,
 ''',
 )
 replace_in_private_function(
     "tintSamsung00003CasioClockChrome",
     '''                SpriteTint.tintRgb565(existing, red, green, blue)
 ''',
-    '''                SpriteTint.tintRgb565(existing, red, green, opticalClockBlue)
+    '''                SpriteTint.tintRgb565(
+                    existing,
+                    opticalClockRed,
+                    opticalClockGreen,
+                    opticalClockBlue,
+                )
 ''',
 )
 replace_in_private_function(
     "tintSamsung00003CasioClockChrome",
     '''            val replacement = SpriteTint.tintRgb565(existing, red, green, blue)
 ''',
-    '''            val replacement = SpriteTint.tintRgb565(existing, red, green, opticalClockBlue)
+    '''            val replacement = SpriteTint.tintRgb565(
+                existing,
+                opticalClockRed,
+                opticalClockGreen,
+                opticalClockBlue,
+            )
+''',
+)
+replace_in_private_function(
+    "tintSamsung00003CasioClockChrome",
+    '''        val targetArgb =
+            (0xFFL shl 24) or
+                (red.toLong() shl 16) or
+                (green.toLong() shl 8) or
+                blue.toLong()
+''',
+    '''        val targetArgb =
+            (0xFFL shl 24) or
+                (opticalClockRed.toLong() shl 16) or
+                (opticalClockGreen.toLong() shl 8) or
+                opticalClockBlue.toLong()
 ''',
 )
 
 path.write_text(text)
-print("Samsung 00003 style3 optical clock compensation applied")
+print("Samsung 00003 style3 full optical warm-gray calibration #B8C794 applied")
