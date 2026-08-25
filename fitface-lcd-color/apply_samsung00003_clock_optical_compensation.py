@@ -47,11 +47,12 @@ def replace_in_private_function(function_name: str, old: str, new: str, expected
     text = text[:start] + block + text[end:]
 
 
-# The logical/user-facing Casio tone remains #B8B8AD. Real Fit3 captures show
-# that this neutral input is emitted as lavender: Green is suppressed while Blue
-# is elevated. For only the proven Samsung 00003 black style, apply the inverse
-# optical payload #B8C794. Other faces, styles, and requested colors stay on the
-# ordinary transform. SpriteTint's rounded RGB565 encoder maps it to 0xB632.
+# The logical/user-facing Casio tone remains #B8B8AD. v9's #B8C794 payload
+# neutralized the phone-camera capture but looked visibly green to the human eye.
+# For only the proven Samsung 00003 black style, v10 backs off Green and restores
+# Blue to the perceptual midpoint payload #B8C0A1. Other faces, styles, and
+# requested colors stay on the ordinary transform. SpriteTint's rounded RGB565
+# encoder maps this payload to 0xB5F4.
 replace_in_function(
     "recolorSpriteWidgetAcrossStyles",
     '''            val background = FaceRecordParser.backgroundImage(entry)?.index
@@ -74,8 +75,8 @@ replace_in_function(
                     green == 0xB8 &&
                     blue == 0xAD
             val opticalClockRed = if (useFit3OpticalCalibration) 0xB8 else red
-            val opticalClockGreen = if (useFit3OpticalCalibration) 0xC7 else green
-            val opticalClockBlue = if (useFit3OpticalCalibration) 0x94 else blue
+            val opticalClockGreen = if (useFit3OpticalCalibration) 0xC0 else green
+            val opticalClockBlue = if (useFit3OpticalCalibration) 0xA1 else blue
             val background = FaceRecordParser.backgroundImage(entry)?.index
 ''',
 )
@@ -104,8 +105,8 @@ replace_in_function(
 )
 
 # The two colon rasters and the three separator bars use RGB565 as well. VALUE /
-# COMPOSITE foreground words are ARGB, but the same inverse optical payload must
-# be encoded there too so every renderer path converges perceptually on one tone.
+# COMPOSITE foreground words are ARGB, but the same perceptual midpoint payload
+# must be encoded there too so every renderer path converges on one visible tone.
 replace_in_private_function(
     "tintSamsung00003CasioClockChrome",
     '''        val imagesByRelativeOffset = images.associateBy {
@@ -132,8 +133,8 @@ replace_in_private_function(
                 green == 0xB8 &&
                 blue == 0xAD
         val opticalClockRed = if (useFit3OpticalCalibration) 0xB8 else red
-        val opticalClockGreen = if (useFit3OpticalCalibration) 0xC7 else green
-        val opticalClockBlue = if (useFit3OpticalCalibration) 0x94 else blue
+        val opticalClockGreen = if (useFit3OpticalCalibration) 0xC0 else green
+        val opticalClockBlue = if (useFit3OpticalCalibration) 0xA1 else blue
 ''',
 )
 replace_in_private_function(
@@ -188,4 +189,4 @@ replace_in_private_function(
 )
 
 path.write_text(text)
-print("Samsung 00003 style3 full optical warm-gray calibration #B8C794 applied")
+print("Samsung 00003 style3 perceptual midpoint optical calibration #B8C0A1 applied")
