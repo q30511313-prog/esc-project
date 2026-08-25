@@ -7,7 +7,7 @@ import org.junit.Test
 
 class Samsung00003ClockOpticalCompensationTest {
     @Test
-    fun style3ClockRasterUsesWarmOpticalBlueWhileArgbForegroundStaysCanonical() {
+    fun style3ForegroundUsesUnifiedInverseOpticalCalibration() {
         val source = syntheticSamsung00003Style3()
         val beforeEntry = source.entryByBasename("style3.bin")
         val selected = FaceRecordParser.scanWidgets(beforeEntry).single {
@@ -34,24 +34,23 @@ class Samsung00003ClockOpticalCompensationTest {
         val digit = afterEntry.offset + afterImages[1].samplesOffset
         val colon = afterEntry.offset + afterImages[2].samplesOffset
 
-        // Four real-watch photos show the RGB565 clock path about 5% too blue
-        // relative to VALUE/COMPOSITE at the same requested #B8B8AD. The style3
-        // raster path therefore uses B8/B8/A5; RGB565 encodes that as 0xB5B4.
-        assertEquals(0xB5B4, bytes.u16(digit))
-        assertEquals(0xB5B4, bytes.u16(colon))
+        // Real Fit3 captures show the logical #B8B8AD shifted lavender on-panel.
+        // The empirically inverted #B8C794 payload quantizes to RGB565 0xB631.
+        assertEquals(0xB631, bytes.u16(digit))
+        assertEquals(0xB631, bytes.u16(colon))
 
-        // ARGB text remains the user's canonical requested value. Optical
-        // compensation is renderer-specific, not a global palette change.
+        // VALUE/COMPOSITE share the same inverse optical payload so all foreground
+        // renderer paths converge on the same perceived warm-neutral LCD tone.
         val pair = afterRecords.single { it.widgetType == WIDGET_PAIR }
         val composite = afterRecords.single { it.widgetType == WIDGET_COMP }
-        assertEquals(0xFFB8B8ADL, pair.words[0])
-        assertEquals(0xFFB8B8ADL, composite.words[13])
+        assertEquals(0xFFB8C794L, pair.words[0])
+        assertEquals(0xFFB8C794L, composite.words[13])
 
-        // The RGB565 separator bars are on the same raster path as the clock.
+        // Separator bars are embedded RGB565 pixels on the same display path.
         val background = afterEntry.offset + afterImages[0].samplesOffset
         val lineOffset = (133 * 256 + 14) * 3
         assertEquals(
-            SpriteTint.tintRgb565(0x4A49, 0xB8, 0xB8, 0xA5),
+            SpriteTint.tintRgb565(0x4A49, 0xB8, 0xC7, 0x94),
             bytes.u16(background + lineOffset),
         )
 
