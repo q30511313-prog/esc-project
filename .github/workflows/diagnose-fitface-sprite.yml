@@ -22,3 +22,6 @@ jobs:
 
       - name: Inspect stock face clock chrome
         run: python3 fitface-lcd-color/inspect_clock_chrome.py
+
+      - name: Inspect stock face clock background
+        run: python3 fitface-lcd-color/inspect_clock_background.py
