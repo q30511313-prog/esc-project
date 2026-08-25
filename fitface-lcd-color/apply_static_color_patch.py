@@ -70,7 +70,18 @@ replace(
             repeat(image.width * image.height) { pixel ->
                 val absolute = entry.offset + image.samplesOffset + pixel * image.bytesPerPixel
                 val existing = output.u16(absolute)
-                val replacement = SpriteTint.tintRgb565(existing, red, green, blue)
+                val replacement = if (image.format == IMAGE_RGB565_ALPHA) {
+                    val alpha = output[absolute + 2].toInt() and 0xFF
+                    SpriteTint.tintRgb565AlphaMask(
+                        pixel = existing,
+                        alpha = alpha,
+                        targetRed = red,
+                        targetGreen = green,
+                        targetBlue = blue,
+                    )
+                } else {
+                    SpriteTint.tintRgb565(existing, red, green, blue)
+                }
                 if (replacement == existing) return@repeat
                 val low = replacement.toByte()
                 val high = (replacement ushr 8).toByte()
