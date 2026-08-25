@@ -25,3 +25,6 @@ jobs:
 
       - name: Inspect stock face clock background
         run: python3 fitface-lcd-color/inspect_clock_background.py
+
+      - name: Inspect style3 separator components
+        run: python3 fitface-lcd-color/inspect_style3_line_components.py
