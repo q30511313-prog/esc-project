@@ -7,7 +7,7 @@ import org.junit.Test
 
 class Samsung00003ClockOpticalCompensationTest {
     @Test
-    fun style3ForegroundUsesUnifiedInverseOpticalCalibration() {
+    fun style3ForegroundUsesUnifiedPerceptualMidpointCalibration() {
         val source = syntheticSamsung00003Style3()
         val beforeEntry = source.entryByBasename("style3.bin")
         val selected = FaceRecordParser.scanWidgets(beforeEntry).single {
@@ -34,23 +34,23 @@ class Samsung00003ClockOpticalCompensationTest {
         val digit = afterEntry.offset + afterImages[1].samplesOffset
         val colon = afterEntry.offset + afterImages[2].samplesOffset
 
-        // Real Fit3 captures show the logical #B8B8AD shifted lavender on-panel.
-        // The empirically inverted #B8C794 payload rounds to RGB565 0xB632.
-        assertEquals(0xB632, bytes.u16(digit))
-        assertEquals(0xB632, bytes.u16(colon))
+        // v9's #B8C794 looked neutral to the phone camera but green to the eye.
+        // v10 backs off Green and restores Blue: #B8C0A1 -> RGB565 0xB5F4.
+        assertEquals(0xB5F4, bytes.u16(digit))
+        assertEquals(0xB5F4, bytes.u16(colon))
 
-        // VALUE/COMPOSITE share the same inverse optical payload so all foreground
-        // renderer paths converge on the same perceived warm-neutral LCD tone.
+        // VALUE/COMPOSITE share the same perceptual midpoint payload so every
+        // foreground renderer path is calibrated together.
         val pair = afterRecords.single { it.widgetType == WIDGET_PAIR }
         val composite = afterRecords.single { it.widgetType == WIDGET_COMP }
-        assertEquals(0xFFB8C794L, pair.words[0])
-        assertEquals(0xFFB8C794L, composite.words[13])
+        assertEquals(0xFFB8C0A1L, pair.words[0])
+        assertEquals(0xFFB8C0A1L, composite.words[13])
 
         // Separator bars are embedded RGB565 pixels on the same display path.
         val background = afterEntry.offset + afterImages[0].samplesOffset
         val lineOffset = (133 * 256 + 14) * 3
         assertEquals(
-            SpriteTint.tintRgb565(0x4A49, 0xB8, 0xC7, 0x94),
+            SpriteTint.tintRgb565(0x4A49, 0xB8, 0xC0, 0xA1),
             bytes.u16(background + lineOffset),
         )
 
