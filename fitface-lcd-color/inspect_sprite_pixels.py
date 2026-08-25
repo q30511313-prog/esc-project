@@ -49,7 +49,7 @@ def decode_image(payload, w, h, fmt):
         step=2
     else:
         return None
-    colors=collections.Counter(); alphas=collections.Counter(); intensities=[]
+    colors=collections.Counter(); alphas=collections.Counter(); intensities=[]; alpha_intensity=[]
     n=min(w*h, len(payload)//step)
     for p in range(n):
         q=p*step
@@ -58,15 +58,18 @@ def decode_image(payload, w, h, fmt):
         alphas[a]+=1
         if not a: continue
         r=((c>>11)&31)*255//31; g=((c>>5)&63)*255//63; b=(c&31)*255//31
+        intensity=max(r,g,b)
         colors[(c,a)]+=1
-        intensities.append(max(r,g,b))
+        intensities.append(intensity)
+        alpha_intensity.append((a,intensity))
     nz=sum(v for k,v in alphas.items() if k)
     if intensities:
         lo=min(intensities); hi=max(intensities); avg=sum(intensities)//len(intensities)
         dark=sum(1 for v in intensities if v<=16)
+        weighted=sum(a*i for a,i in alpha_intensity)//max(1,sum(a for a,_ in alpha_intensity))
     else:
-        lo=hi=avg=dark=0
-    return colors, alphas, nz, lo, hi, avg, dark
+        lo=hi=avg=dark=weighted=0
+    return colors, alphas, nz, lo, hi, avg, dark, weighted
 
 for path,off,size in directory:
     if not re.search(r'/style\d+\.bin$',path): continue
@@ -84,20 +87,19 @@ for path,off,size in directory:
     if not sprites: continue
     print(f'=== {path.rsplit("/",1)[-1]} SPRITES={len(sprites)} images={len(imgs)} ===')
     for ro,typ,seq,gi,x,y,w,h,unk,words in sprites:
-        print(f'g#{gi} type=3 seq={seq} xy={x},{y} wh={w}x{h} unk20=0x{unk:08X} words='+' '.join(f'0x{v:08X}' for v in words))
-        start=imgmap.get(unk)
-        if start is None:
-            print('  unk20 does not point directly at an image record')
-            continue
-        base=imgs[start]
-        bw,bh,bfmt=base[1],base[2],base[3]
-        print(f'  pool-start image#{start} {bw}x{bh} fmt=0x{bfmt:04X}')
-        for idx in range(start,min(start+12,len(imgs))):
+        frame_count=min(unk & 0x00FFFFFF,len(words))
+        pointers=words[:frame_count]
+        extras=words[frame_count:]
+        print(f'g#{gi} type=3 seq={seq} xy={x},{y} wh={w}x{h} frame_count={frame_count} pointers='+' '.join(f'0x{v:08X}' for v in pointers)+' extras='+' '.join(f'0x{v:08X}' for v in extras))
+        for frame_no,ptr in enumerate(pointers):
+            idx=imgmap.get(ptr)
+            if idx is None:
+                print(f'  frame{frame_no}: pointer 0x{ptr:08X} does not resolve')
+                continue
             rel,iw,ih,fmt,ds,pix,payload=imgs[idx]
-            if idx>start and (iw,ih,fmt)!=(bw,bh,bfmt): break
             decoded=decode_image(payload,iw,ih,fmt)
             if decoded is None:
-                print(f'    image#{idx} unsupported fmt=0x{fmt:04X}')
+                print(f'  frame{frame_no}: image#{idx} rel={rel} {iw}x{ih} unsupported fmt=0x{fmt:04X}')
                 continue
-            colors,alphas,nz,lo,hi,avg,dark=decoded
-            print(f'    image#{idx} rel={rel} nonzero-alpha={nz}/{iw*ih} intensity[min/avg/max]={lo}/{avg}/{hi} <=16={dark} top565={colors.most_common(6)} alpha={alphas.most_common(6)}')
+            colors,alphas,nz,lo,hi,avg,dark,weighted=decoded
+            print(f'  frame{frame_no}: image#{idx} rel={rel} {iw}x{ih} fmt=0x{fmt:04X} nonzero-alpha={nz}/{iw*ih} intensity[min/avg/max]={lo}/{avg}/{hi} alpha-weighted-intensity={weighted} <=16={dark} top565={colors.most_common(8)} alpha={alphas.most_common(8)}')
