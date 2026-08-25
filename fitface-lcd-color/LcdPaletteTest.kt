@@ -14,14 +14,14 @@ class LcdPaletteTest {
     }
 
     @Test
-    fun fit3OpticalSilverCompensatesLavenderPanelShift() {
-        // Two independent real-Fit3 captures show requested neutral #B8B8AD
-        // rendering with Green suppressed and Blue elevated. The inverse payload
-        // keeps Red fixed, raises Green, and lowers Blue. SpriteTint's rounded
-        // RGB565 encoder maps #B8C794 to 0xB632 for raster paths.
+    fun fit3OpticalSilverUsesPerceptualMidpointAfterGreenOvershoot() {
+        // v9 (#B8C794) looked neutral to the phone camera but visibly green to the
+        // human eye. Keep the correction direction, but back off Green and restore
+        // Blue toward the logical #B8B8AD target. The first perceptual midpoint
+        // candidate is #B8C0A1; RGB565 rounds it to 0xB5F4.
         assertEquals(0xB8, LcdPalette.FIT3_OPTICAL_RED)
-        assertEquals(0xC7, LcdPalette.FIT3_OPTICAL_GREEN)
-        assertEquals(0x94, LcdPalette.FIT3_OPTICAL_BLUE)
-        assertEquals(0xFFB8C794.toInt(), LcdPalette.FIT3_OPTICAL_ARGB)
+        assertEquals(0xC0, LcdPalette.FIT3_OPTICAL_GREEN)
+        assertEquals(0xA1, LcdPalette.FIT3_OPTICAL_BLUE)
+        assertEquals(0xFFB8C0A1.toInt(), LcdPalette.FIT3_OPTICAL_ARGB)
     }
 }
