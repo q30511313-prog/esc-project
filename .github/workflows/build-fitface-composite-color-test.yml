@@ -51,6 +51,7 @@ jobs:
           cp helper/fitface-lcd-color/LcdPaletteTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdPaletteTest.kt
           cp helper/fitface-lcd-color/CompositeColorOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CompositeColorOverrideTest.kt
           cp helper/fitface-lcd-color/StaticRasterTintTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticRasterTintTest.kt
+          cp helper/fitface-lcd-color/StaticAlphaMaskTintTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticAlphaMaskTintTest.kt
           cp helper/fitface-lcd-color/AnchoredPairColorTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/AnchoredPairColorTest.kt
           cp helper/fitface-lcd-color/DuplicateSequencePairColorTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/DuplicateSequencePairColorTest.kt
           cp helper/fitface-lcd-color/ClockSpriteColorGroupTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/ClockSpriteColorGroupTest.kt
@@ -103,6 +104,7 @@ jobs:
             --tests '*LcdPaletteTest*' \
             --tests '*CompositeColorOverrideTest*' \
             --tests '*StaticRasterTintTest*' \
+            --tests '*StaticAlphaMaskTintTest*' \
             --tests '*AnchoredPairColorTest*' \
             --tests '*DuplicateSequencePairColorTest*' \
             --tests '*ClockSpriteColorGroupTest*' \
