@@ -1,0 +1,21 @@
+name: Diagnose Fit3 Sprite Payloads
+
+on:
+  push:
+    branches:
+      - tmp-fitface-composite
+
+permissions:
+  contents: read
+
+jobs:
+  diagnose-sprites:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out helper
+        uses: actions/checkout@v4
+        with:
+          ref: tmp-fitface-composite
+
+      - name: Inspect stock face sprite pixel payloads
+        run: python3 fitface-lcd-color/inspect_sprite_pixels.py
