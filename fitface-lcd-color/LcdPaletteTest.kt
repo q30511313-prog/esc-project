@@ -6,10 +6,10 @@ import org.junit.Test
 
 class LcdPaletteTest {
     @Test
-    fun approvedSilverMatchesFinalCasioReference9f9e99() {
-        assertEquals(0xFF9F9E99.toInt(), LcdPalette.SILVER_ARGB)
-        assertEquals(0x9F, LcdPalette.SILVER_RED)
-        assertEquals(0x9E, LcdPalette.SILVER_GREEN)
-        assertEquals(0x99, LcdPalette.SILVER_BLUE)
+    fun approvedSilverMatchesBrightCasioReferenceB8B8AD() {
+        assertEquals(0xFFB8B8AD.toInt(), LcdPalette.SILVER_ARGB)
+        assertEquals(0xB8, LcdPalette.SILVER_RED)
+        assertEquals(0xB8, LcdPalette.SILVER_GREEN)
+        assertEquals(0xAD, LcdPalette.SILVER_BLUE)
     }
 }
