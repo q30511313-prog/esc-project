@@ -79,6 +79,9 @@ jobs:
       - name: Apply hardware non-sprite color fixes
         run: python3 helper/fitface-lcd-color/apply_hardware_color_fix.py fitface-studio
 
+      - name: Apply bright G-SHOCK LCD label
+        run: python3 helper/fitface-lcd-color/apply_bright_lcd_label.py fitface-studio
+
       - name: Give integrated experiment a unique application ID
         run: sed -i 's/applicationId = "dev.fitface.studio"/applicationId = "dev.fitface.studio.lcdcomposite"/' fitface-studio/app/build.gradle.kts
 
@@ -112,7 +115,7 @@ jobs:
       - name: Upload integrated APK
         uses: actions/upload-artifact@v4
         with:
-          name: fitface-studio-lcd-hardware-color-v2-debug
+          name: fitface-studio-lcd-gshock-B8B8AD-v3-debug
           path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
