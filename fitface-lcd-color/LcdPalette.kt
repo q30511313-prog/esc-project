@@ -1,9 +1,9 @@
 package dev.fitface.studio.core.model
 
-/** Approved warm-neutral LCD gray sampled from the final Casio-style reference face. */
+/** Bright warm-neutral LCD gray sampled from the supplied G-SHOCK reference display. */
 object LcdPalette {
-    val SILVER_ARGB: Int = 0xFF9F9E99.toInt()
-    const val SILVER_RED: Int = 0x9F
-    const val SILVER_GREEN: Int = 0x9E
-    const val SILVER_BLUE: Int = 0x99
+    val SILVER_ARGB: Int = 0xFFB8B8AD.toInt()
+    const val SILVER_RED: Int = 0xB8
+    const val SILVER_GREEN: Int = 0xB8
+    const val SILVER_BLUE: Int = 0xAD
 }
