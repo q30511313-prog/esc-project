@@ -19,3 +19,6 @@ jobs:
 
       - name: Inspect stock face sprite pixel payloads
         run: python3 fitface-lcd-color/inspect_sprite_pixels.py
+
+      - name: Inspect stock face clock chrome
+        run: python3 fitface-lcd-color/inspect_clock_chrome.py
