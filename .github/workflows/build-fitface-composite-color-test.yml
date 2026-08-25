@@ -93,7 +93,7 @@ jobs:
       - name: Apply Samsung 00003 full foreground tone unification
         run: python3 helper/fitface-lcd-color/apply_samsung00003_foreground_tone_fix.py fitface-studio
 
-      - name: Apply Samsung 00003 style3 optical clock compensation
+      - name: Apply Samsung 00003 style3 full optical calibration
         run: python3 helper/fitface-lcd-color/apply_samsung00003_clock_optical_compensation.py fitface-studio
 
       - name: Normalize Pair color patch order
@@ -143,7 +143,7 @@ jobs:
       - name: Upload integrated APK
         uses: actions/upload-artifact@v4
         with:
-          name: fitface-studio-lcd-gshock-B8B8AD-optical-v8-debug
+          name: fitface-studio-lcd-gshock-B8B8AD-optical-v9-debug
           path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
