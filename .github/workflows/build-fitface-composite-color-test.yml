@@ -57,6 +57,7 @@ jobs:
           cp helper/fitface-lcd-color/ClockSpriteColorGroupTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/ClockSpriteColorGroupTest.kt
           cp helper/fitface-lcd-color/CasioClockChromeToneTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CasioClockChromeToneTest.kt
           cp helper/fitface-lcd-color/Samsung00003ForegroundToneTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/Samsung00003ForegroundToneTest.kt
+          cp helper/fitface-lcd-color/Samsung00003ClockOpticalCompensationTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/Samsung00003ClockOpticalCompensationTest.kt
 
       - name: Apply sequence experiment foundation
         run: |
@@ -118,6 +119,7 @@ jobs:
             --tests '*ClockSpriteColorGroupTest*' \
             --tests '*CasioClockChromeToneTest*' \
             --tests '*Samsung00003ForegroundToneTest*' \
+            --tests '*Samsung00003ClockOpticalCompensationTest*' \
             --tests '*SequenceOverrideTest*' \
             --tests '*PairBindingOverrideTest*'
 
