@@ -32,4 +32,32 @@ class LcdSpriteTintTest {
         assertTrue(brightR > dimR)
         assertTrue(dimR > 40)
     }
+
+    @Test
+    fun opaqueBlackAlphaMaskPixelReceivesTargetRgb() {
+        assertEquals(
+            0xB5B5,
+            SpriteTint.tintRgb565AlphaMask(
+                pixel = 0x0000,
+                alpha = 0xFF,
+                targetRed = 0xB8,
+                targetGreen = 0xB8,
+                targetBlue = 0xAD,
+            ),
+        )
+    }
+
+    @Test
+    fun transparentAlphaMaskPixelKeepsStoredRgb() {
+        assertEquals(
+            0x0000,
+            SpriteTint.tintRgb565AlphaMask(
+                pixel = 0x0000,
+                alpha = 0x00,
+                targetRed = 0xB8,
+                targetGreen = 0xB8,
+                targetBlue = 0xAD,
+            ),
+        )
+    }
 }
