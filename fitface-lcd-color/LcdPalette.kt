@@ -9,12 +9,13 @@ object LcdPalette {
 
     /**
      * Fit3 OLED payload calibration for the logical #B8B8AD Casio/MIP tone.
-     * Real-device captures show the panel/render path suppressing Green and
-     * elevating Blue; this inverse payload is intentionally device/face scoped
-     * by FaceEditor and must not replace the user-facing logical palette.
+     * v9's #B8C794 inverse payload looked neutral to the phone camera but visibly
+     * green to the human eye. v10 backs off Green and restores Blue toward the
+     * logical target, using the first perceptual midpoint #B8C0A1. FaceEditor
+     * scopes this payload to the proven Samsung 00003 black style only.
      */
-    val FIT3_OPTICAL_ARGB: Int = 0xFFB8C794.toInt()
+    val FIT3_OPTICAL_ARGB: Int = 0xFFB8C0A1.toInt()
     const val FIT3_OPTICAL_RED: Int = 0xB8
-    const val FIT3_OPTICAL_GREEN: Int = 0xC7
-    const val FIT3_OPTICAL_BLUE: Int = 0x94
+    const val FIT3_OPTICAL_GREEN: Int = 0xC0
+    const val FIT3_OPTICAL_BLUE: Int = 0xA1
 }
