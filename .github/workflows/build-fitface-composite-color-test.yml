@@ -66,7 +66,7 @@ jobs:
       - name: Apply Pair binding experiment
         run: |
           python3 helper/fitface-pair-binding/apply_patch.py fitface-studio
-          cp helper/fitface-pair-binding/PairBindingOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface-studio/core/format/PairBindingOverrideTest.kt
+          cp helper/fitface-pair-binding/PairBindingOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/PairBindingOverrideTest.kt
 
       - name: Apply Sprite and Pair LCD controls
         run: |
