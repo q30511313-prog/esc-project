@@ -70,6 +70,9 @@ jobs:
           sed -i 's/if count != 1:/if count < 1:/' helper/fitface-lcd-color/apply_patch.py
           python3 helper/fitface-lcd-color/apply_patch.py fitface-studio
 
+      - name: Apply RGB565+A Sprite mask fix
+        run: python3 helper/fitface-lcd-color/apply_sprite_alpha_mask_fix.py fitface-studio
+
       - name: Apply Composite color control
         run: python3 helper/fitface-lcd-color/apply_composite_color_patch.py fitface-studio
 
@@ -118,7 +121,7 @@ jobs:
       - name: Upload integrated APK
         uses: actions/upload-artifact@v4
         with:
-          name: fitface-studio-lcd-gshock-B8B8AD-v3-debug
+          name: fitface-studio-lcd-gshock-B8B8AD-alpha-mask-v4-debug
           path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
