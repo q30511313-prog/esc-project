@@ -66,7 +66,7 @@ jobs:
       - name: Apply Pair binding experiment
         run: |
           python3 helper/fitface-pair-binding/apply_patch.py fitface-studio
-          cp helper/fitface-pair-binding/PairBindingOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/PairBindingOverrideTest.kt
+          cp helper/fitface-pair-binding/PairBindingOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface-studio/core/format/PairBindingOverrideTest.kt
 
       - name: Apply Sprite and Pair LCD controls
         run: |
@@ -84,6 +84,9 @@ jobs:
 
       - name: Apply type-1 Static image raster color control
         run: python3 helper/fitface-lcd-color/apply_static_color_patch.py fitface-studio
+
+      - name: Apply Casio clock chrome tone unification
+        run: python3 helper/fitface-lcd-color/apply_casio_clock_chrome_tone_fix.py fitface-studio
 
       - name: Normalize Pair color patch order
         run: python3 helper/fitface-lcd-color/normalize_pair_color_anchor.py fitface-studio
@@ -130,7 +133,7 @@ jobs:
       - name: Upload integrated APK
         uses: actions/upload-artifact@v4
         with:
-          name: fitface-studio-lcd-gshock-B8B8AD-clock-group-v5-debug
+          name: fitface-studio-lcd-gshock-B8B8AD-casio-chrome-v6-debug
           path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
