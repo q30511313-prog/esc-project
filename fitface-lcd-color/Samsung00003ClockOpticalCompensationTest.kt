@@ -35,9 +35,9 @@ class Samsung00003ClockOpticalCompensationTest {
         val colon = afterEntry.offset + afterImages[2].samplesOffset
 
         // Real Fit3 captures show the logical #B8B8AD shifted lavender on-panel.
-        // The empirically inverted #B8C794 payload quantizes to RGB565 0xB631.
-        assertEquals(0xB631, bytes.u16(digit))
-        assertEquals(0xB631, bytes.u16(colon))
+        // The empirically inverted #B8C794 payload rounds to RGB565 0xB632.
+        assertEquals(0xB632, bytes.u16(digit))
+        assertEquals(0xB632, bytes.u16(colon))
 
         // VALUE/COMPOSITE share the same inverse optical payload so all foreground
         // renderer paths converge on the same perceived warm-neutral LCD tone.
