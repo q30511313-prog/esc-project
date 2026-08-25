@@ -15,13 +15,13 @@ class LcdPaletteTest {
 
     @Test
     fun fit3OpticalSilverCompensatesLavenderPanelShift() {
-        // Real Fit3 photos show requested neutral #B8B8AD rendering with
-        // Green suppressed and Blue elevated. The calibrated payload keeps
-        // Red fixed, raises Green, and lowers Blue so the emitted OLED color
-        // converges on the warm-neutral Casio/MIP reference.
+        // Two independent real-Fit3 captures show requested neutral #B8B8AD
+        // rendering with Green suppressed and Blue elevated. The inverse payload
+        // keeps Red fixed, raises Green, and lowers Blue. #B8C794 also quantizes
+        // cleanly to RGB565 0xB631 for the clock/colon/separator raster path.
         assertEquals(0xB8, LcdPalette.FIT3_OPTICAL_RED)
         assertEquals(0xC7, LcdPalette.FIT3_OPTICAL_GREEN)
-        assertEquals(0x90, LcdPalette.FIT3_OPTICAL_BLUE)
-        assertEquals(0xFFB8C790.toInt(), LcdPalette.FIT3_OPTICAL_ARGB)
+        assertEquals(0x94, LcdPalette.FIT3_OPTICAL_BLUE)
+        assertEquals(0xFFB8C794.toInt(), LcdPalette.FIT3_OPTICAL_ARGB)
     }
 }
