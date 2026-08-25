@@ -51,7 +51,7 @@ def replace_in_private_function(function_name: str, old: str, new: str, expected
 # that this neutral input is emitted as lavender: Green is suppressed while Blue
 # is elevated. For only the proven Samsung 00003 black style, apply the inverse
 # optical payload #B8C794. Other faces, styles, and requested colors stay on the
-# ordinary transform. RGB565 quantizes the calibrated payload to 0xB631.
+# ordinary transform. SpriteTint's rounded RGB565 encoder maps it to 0xB632.
 replace_in_function(
     "recolorSpriteWidgetAcrossStyles",
     '''            val background = FaceRecordParser.backgroundImage(entry)?.index
