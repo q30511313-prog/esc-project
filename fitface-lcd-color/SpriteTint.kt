@@ -1,7 +1,12 @@
 package dev.fitface.studio.core.format
 
-/** Luminance-preserving tint for RGB565 glyph artwork. */
+/** Color transforms for RGB565 glyph artwork. */
 internal object SpriteTint {
+    /**
+     * Recolors ordinary RGB565 artwork while preserving its stored luminance.
+     * This remains the behavior for RGB565 frames that do not carry a separate
+     * coverage/alpha channel.
+     */
     fun tintRgb565(
         pixel: Int,
         targetRed: Int,
@@ -22,6 +27,29 @@ internal object SpriteTint {
         val outGreen = (targetGreen * intensity + 127) / 255
         val outBlue = (targetBlue * intensity + 127) / 255
         return encodeRgb565(outRed, outGreen, outBlue)
+    }
+
+    /**
+     * Recolors RGB565+A glyph masks.
+     *
+     * Samsung stock Fit3 faces can store the glyph RGB565 word as pure black and
+     * put the complete glyph shape plus anti-alias coverage in the following alpha
+     * byte. In that representation RGB luminance is not a coverage signal, so a
+     * luminance-preserving transform would incorrectly leave every visible glyph
+     * pixel black. For non-transparent mask pixels, write the requested LCD color
+     * directly; the caller keeps the original alpha byte verbatim.
+     */
+    fun tintRgb565AlphaMask(
+        pixel: Int,
+        alpha: Int,
+        targetRed: Int,
+        targetGreen: Int,
+        targetBlue: Int,
+    ): Int {
+        require(alpha in 0..255)
+        require(targetRed in 0..255 && targetGreen in 0..255 && targetBlue in 0..255)
+        if (alpha == 0) return pixel
+        return encodeRgb565(targetRed, targetGreen, targetBlue)
     }
 
     private fun encodeRgb565(red: Int, green: Int, blue: Int): Int {
