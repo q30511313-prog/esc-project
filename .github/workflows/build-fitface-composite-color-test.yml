@@ -89,6 +89,9 @@ jobs:
       - name: Apply Casio clock chrome tone unification
         run: python3 helper/fitface-lcd-color/apply_casio_clock_chrome_tone_fix.py fitface-studio
 
+      - name: Apply Samsung 00003 full foreground tone unification
+        run: python3 helper/fitface-lcd-color/apply_samsung00003_foreground_tone_fix.py fitface-studio
+
       - name: Normalize Pair color patch order
         run: python3 helper/fitface-lcd-color/normalize_pair_color_anchor.py fitface-studio
 
@@ -135,7 +138,7 @@ jobs:
       - name: Upload integrated APK
         uses: actions/upload-artifact@v4
         with:
-          name: fitface-studio-lcd-gshock-B8B8AD-casio-chrome-v6-debug
+          name: fitface-studio-lcd-gshock-B8B8AD-foreground-v7-debug
           path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 7
