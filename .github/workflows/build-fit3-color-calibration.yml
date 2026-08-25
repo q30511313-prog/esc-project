@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - tmp-fit3-color-calibration
+  pull_request:
+    branches:
+      - tmp-fitface-composite
 
 permissions:
   contents: read
