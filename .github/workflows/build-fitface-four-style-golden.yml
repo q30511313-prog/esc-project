@@ -104,3 +104,27 @@ jobs:
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
             --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
             --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest
+
+      - name: Install Golden seconds compiler test
+        shell: bash
+        run: |
+          cp fitface-layout-golden/Samsung00049SecondsCompilerTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+
+      - name: RED — Golden seconds compiler does not exist yet
+        shell: bash
+        run: |
+          set +e
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SecondsCompilerTest \
+            > ../seconds-red.log 2>&1
+          status=$?
+          set -e
+          cat ../seconds-red.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected seconds compiler RED failure but test passed.' >&2
+            exit 1
+          fi
+          grep -F "Unresolved reference 'GoldenSemanticCompiler'" ../seconds-red.log
+          echo 'Golden seconds RED confirmed: compiler is missing.'
