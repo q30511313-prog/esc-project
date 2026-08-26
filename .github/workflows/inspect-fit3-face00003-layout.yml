@@ -1,0 +1,208 @@
+name: Inspect Fit3 00003 Layout Semantics
+
+on:
+  push:
+    branches:
+      - work/fitface-layout-production
+    paths:
+      - '.github/workflows/inspect-fit3-face00003-layout.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-layout:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Samsung face 00003 and inventory style3
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, io, json, pathlib, struct, time, urllib.parse, urllib.request
+          import xml.etree.ElementTree as ET, zipfile
+
+          out = pathlib.Path('out')
+          out.mkdir(exist_ok=True)
+
+          appid = 'com.samsung.fit3watchface.sm_r390_0003'
+          suffix = 'GALAXYAPPSAPI'
+          hash_value = base64.b64encode(
+              hashlib.sha1((appid + suffix).encode('latin1')).digest()
+          ).decode()
+          params = {
+              'csc': 'NONE', 'sdkVer': '36',
+              'callerId': 'com.samsung.wearable.fit3plugin',
+              'versionCode': '126071051', 'mcc': '450', 'mnc': '10',
+              'systemId': str(int(time.time() * 1000)), 'extuk': '', 'abiType': '64',
+              'deviceId': 'SM-R390', 'loginType': 'N', 'oneUiVersion': '0',
+              'cc': 'KOR', 'pd': '0', 'appInfo': appid, 'hashValue': hash_value,
+          }
+          stub = 'https://vas.samsungapps.com/vas/stub/gearAppDownload.as?' + urllib.parse.urlencode(params)
+          req = urllib.request.Request(stub, headers={'User-Agent': 'Mozilla/5.0'})
+          xml = urllib.request.urlopen(req, timeout=30).read()
+          (out / 'download.xml').write_bytes(xml)
+          root = ET.fromstring(xml)
+          vals = {e.tag: (e.text or '').strip() for e in root.iter()}
+          dl = vals.get('downloadURI') or vals.get('downloadUri') or vals.get('downloadURL') or vals.get('downloadUrl')
+          if not dl:
+              print(xml.decode('utf-8', 'replace'))
+              raise SystemExit('No download URI in Samsung response')
+
+          req = urllib.request.Request(dl, headers={'User-Agent': 'Mozilla/5.0'})
+          apk = urllib.request.urlopen(req, timeout=60).read()
+          (out / 'face00003.apk').write_bytes(apk)
+          print('APK_BYTES', len(apk))
+          print('APK_SHA256', hashlib.sha256(apk).hexdigest())
+
+          z = zipfile.ZipFile(io.BytesIO(apk))
+          names = z.namelist()
+          member = [n for n in names if n.endswith('SM-R390_00003_256x402.bin')]
+          if len(member) != 1:
+              raise SystemExit(f'container member not unique: {member}')
+          data = z.read(member[0])
+          (out / 'SM-R390_00003_256x402.bin').write_bytes(data)
+          print('CONTAINER_MEMBER', member[0])
+          print('CONTAINER_BYTES', len(data))
+          print('CONTAINER_SHA256', hashlib.sha256(data).hexdigest())
+
+          # Save any shipped 256x402 style preview images for visual semantic matching.
+          preview_members = [n for n in names if n.lower().endswith(('.png', '.jpg', '.jpeg')) and ('0003' in n.lower() or '00003' in n.lower())]
+          for i, n in enumerate(preview_members):
+              b = z.read(n)
+              target = out / f'preview_asset_{i:02d}_{pathlib.Path(n).name}'
+              target.write_bytes(b)
+              print('PREVIEW_ASSET', n, len(b), target)
+
+          u16 = lambda b, o: struct.unpack_from('<H', b, o)[0]
+          s16 = lambda b, o: struct.unpack_from('<h', b, o)[0]
+          u32 = lambda b, o: struct.unpack_from('<I', b, o)[0]
+
+          entries = []
+          count = u32(data, 12)
+          for i in range(count):
+              ro = 32 + i * 74
+              raw = data[ro:ro+74]
+              path = raw[:64].split(b'\0', 1)[0].decode('utf-8', 'replace')
+              off = u32(raw, 64)
+              size = u32(raw, 68)
+              entries.append((i, path, off, size, data[off:off+size]))
+
+          # Font role bindings.
+          font_lines = []
+          for i, path, off, size, entry in entries:
+              name = pathlib.Path(path).name
+              if name.startswith('font_') and len(entry) == 92:
+                  family = entry[0]
+                  role = entry[0x48:0x58].split(b'\0', 1)[0].decode('ascii', 'replace')
+                  point_size = u32(entry, 0x58)
+                  font_lines.append(f'{name}: family={family} role={role} pointSize={point_size}')
+          (out / 'font_roles.txt').write_text('\n'.join(font_lines) + '\n')
+          print('FONT_ROLES')
+          print('\n'.join(font_lines))
+
+          # Korean glyph table groups.
+          ko_lines = []
+          for i, path, off, size, entry in entries:
+              name = pathlib.Path(path).name
+              if name != 'font_ko.bin' or len(entry) < 24:
+                  continue
+              magic = u32(entry, 0)
+              locale_id = u32(entry, 4)
+              group_count = u32(entry, 8)
+              ko_lines.append(f'{name}: magic=0x{magic:08X} locale={locale_id} groups={group_count}')
+              desc = []
+              for g in range(group_count):
+                  length = u32(entry, 0x18 + g*8)
+                  rel = u32(entry, 0x1C + g*8)
+                  text = entry[rel:rel+length].decode('utf-8', 'replace')
+                  desc.append((g, length, rel, text))
+                  ko_lines.append(f'  group[{g}] len={length} off={rel} text={text!r}')
+          (out / 'font_ko_groups.txt').write_text('\n'.join(ko_lines) + '\n')
+          print('KOREAN_GLYPH_GROUPS')
+          print('\n'.join(ko_lines))
+
+          widget_lines = []
+          inventory = []
+          for i, path, off, size, entry in entries:
+              if not path.endswith('style3.bin'):
+                  continue
+              wc = u32(entry, 4)
+              imageoff = u32(entry, 20)
+              cur = 24
+              image_section = imageoff
+
+              # Scan image records so raster-addressing widgets can report real extents.
+              images = {}
+              icur = image_section
+              while icur < len(entry):
+                  if icur + 12 > len(entry):
+                      break
+                  w = u16(entry, icur)
+                  h = u16(entry, icur+2)
+                  fmt = u16(entry, icur+4)
+                  dsize = u32(entry, icur+8)
+                  if w <= 0 or h <= 0 or dsize < 4 or icur + 12 + dsize > len(entry):
+                      break
+                  images[icur - image_section] = {'w': w, 'h': h, 'fmt': fmt, 'record': 12 + dsize}
+                  icur += 12 + dsize
+
+              widget_lines.append(f'ENTRY {path} widgets={wc} imageoff={imageoff} images={len(images)}')
+              ordinal = 0
+              while cur < imageoff:
+                  typ = u32(entry, cur)
+                  seq = u32(entry, cur+4)
+                  idxsz = u32(entry, cur+12)
+                  recsz = idxsz & 0xFFFF
+                  gidx = idxsz >> 16
+                  x = s16(entry, cur+0x18)
+                  y = s16(entry, cur+0x1A)
+                  wfield = s16(entry, cur+0x1C)
+                  hfield = s16(entry, cur+0x1E)
+                  words = [u32(entry, cur+36+j*4) for j in range((recsz-36)//4)]
+
+                  frame_info = []
+                  if typ == 1 and words:
+                      im = images.get(words[0])
+                      if im: frame_info.append({'offset': words[0], **im})
+                  elif typ == 3 and words:
+                      frame_count = words[0]
+                      for ptr in words[1:1+frame_count]:
+                          im = images.get(ptr)
+                          if im: frame_info.append({'offset': ptr, **im})
+                  elif typ == 2 and len(words) >= 2:
+                      im = images.get(words[1])
+                      if im: frame_info.append({'offset': words[1], **im})
+
+                  unique_sizes = sorted({(f['w'], f['h'], f['fmt']) for f in frame_info})
+                  line = (
+                      f'W#{ordinal:02d} g#{gidx:02d} type={typ:02d} seq={seq:03d} '
+                      f'xy=({x:4d},{y:4d}) fieldWH=({wfield:4d},{hfield:4d}) size={recsz:3d} '
+                      f'frames={len(frame_info):2d} frameSizes={unique_sizes} words=' +
+                      ','.join(f'0x{v:08X}' for v in words)
+                  )
+                  widget_lines.append(line)
+                  inventory.append({
+                      'ordinal': ordinal, 'globalIndex': gidx, 'type': typ, 'sequenceId': seq,
+                      'x': x, 'y': y, 'widthField': wfield, 'heightField': hfield,
+                      'recordSize': recsz, 'words': words,
+                      'frameInfo': frame_info,
+                  })
+                  ordinal += 1
+                  cur += recsz
+
+              if ordinal != wc:
+                  raise SystemExit(f'widget count mismatch: parsed={ordinal} header={wc}')
+
+          (out / 'style3_widget_inventory.txt').write_text('\n'.join(widget_lines) + '\n')
+          (out / 'style3_widget_inventory.json').write_text(json.dumps(inventory, ensure_ascii=False, indent=2))
+          print('STYLE3_WIDGET_INVENTORY')
+          print('\n'.join(widget_lines))
+          PY
+
+      - name: Upload semantic inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: fit3-face00003-layout-semantic-inventory
+          path: out
+          if-no-files-found: error
+          retention-days: 3
