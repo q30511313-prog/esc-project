@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "sourceCanvas": {"width": 978, "height": 1536},
+  "fit3Canvas": {"width": 256, "height": 402},
+  "mapping": {
+    "x": "round(x*256/978)",
+    "y": "round(y*402/1536)",
+    "w": "round(w*256/978)",
+    "h": "round(h*402/1536)"
+  },
+  "designs": [
+    {
+      "id": "design01_8944",
+      "sourceFile": "1000028944.png",
+      "dateMode": "FULL_KO",
+      "boxes": {
+        "DATE": {"sourcePx":{"x":250,"y":180,"w":480,"h":65},"fit3Px":{"x":65,"y":47,"w":126,"h":17}},
+        "WEEKDAY": {"sourcePx":{"x":410,"y":306,"w":160,"h":54},"fit3Px":{"x":107,"y":80,"w":42,"h":14}},
+        "AM_PM": {"sourcePx":{"x":185,"y":460,"w":95,"h":60},"fit3Px":{"x":48,"y":120,"w":25,"h":16}},
+        "TIME": {"sourcePx":{"x":295,"y":530,"w":485,"h":280},"fit3Px":{"x":77,"y":139,"w":127,"h":73}},
+        "SECONDS": {"sourcePx":{"x":185,"y":982,"w":180,"h":113},"fit3Px":{"x":48,"y":257,"w":47,"h":30}},
+        "WEATHER_ICON": {"sourcePx":{"x":376,"y":965,"w":224,"h":175},"fit3Px":{"x":98,"y":253,"w":59,"h":46}},
+        "WEATHER_TEXT": {"sourcePx":{"x":426,"y":1150,"w":142,"h":62},"fit3Px":{"x":112,"y":301,"w":37,"h":16}},
+        "TEMP": {"sourcePx":{"x":655,"y":995,"w":160,"h":95},"fit3Px":{"x":171,"y":260,"w":42,"h":25}},
+        "BATTERY_ICON": {"sourcePx":{"x":180,"y":1287,"w":105,"h":78},"fit3Px":{"x":47,"y":337,"w":27,"h":20}},
+        "BATTERY_PERCENT": {"sourcePx":{"x":315,"y":1285,"w":135,"h":80},"fit3Px":{"x":82,"y":336,"w":35,"h":21}}
+      }
+    },
+    {
+      "id": "design02_8943",
+      "sourceFile": "1000028943.png",
+      "dateMode": "FULL_KO",
+      "boxes": {
+        "DATE": {"sourcePx":{"x":260,"y":185,"w":458,"h":55},"fit3Px":{"x":68,"y":48,"w":120,"h":14}},
+        "WEEKDAY": {"sourcePx":{"x":390,"y":286,"w":185,"h":54},"fit3Px":{"x":102,"y":75,"w":48,"h":14}},
+        "AM_PM": {"sourcePx":{"x":181,"y":410,"w":97,"h":48},"fit3Px":{"x":47,"y":107,"w":25,"h":13}},
+        "TIME": {"sourcePx":{"x":245,"y":479,"w":545,"h":277},"fit3Px":{"x":64,"y":125,"w":143,"h":72}},
+        "SECONDS": {"sourcePx":{"x":410,"y":852,"w":178,"h":148},"fit3Px":{"x":107,"y":223,"w":47,"h":39}},
+        "BATTERY_ICON": {"sourcePx":{"x":220,"y":1112,"w":130,"h":75},"fit3Px":{"x":58,"y":291,"w":34,"h":20}},
+        "BATTERY_PERCENT": {"sourcePx":{"x":230,"y":1216,"w":130,"h":62},"fit3Px":{"x":60,"y":318,"w":34,"h":16}},
+        "WEATHER_ICON": {"sourcePx":{"x":658,"y":1082,"w":124,"h":86},"fit3Px":{"x":172,"y":283,"w":32,"h":23}},
+        "TEMP": {"sourcePx":{"x":660,"y":1192,"w":133,"h":62},"fit3Px":{"x":173,"y":312,"w":35,"h":16}},
+        "WEATHER_TEXT": {"sourcePx":{"x":648,"y":1260,"w":137,"h":57},"fit3Px":{"x":170,"y":330,"w":36,"h":15}}
+      }
+    },
+    {
+      "id": "design03_8941",
+      "sourceFile": "1000028941.png",
+      "dateMode": "FULL_KO",
+      "boxes": {
+        "DATE": {"sourcePx":{"x":290,"y":241,"w":395,"h":46},"fit3Px":{"x":76,"y":63,"w":103,"h":12}},
+        "WEEKDAY": {"sourcePx":{"x":400,"y":356,"w":190,"h":51},"fit3Px":{"x":105,"y":93,"w":50,"h":13}},
+        "AM_PM": {"sourcePx":{"x":235,"y":438,"w":75,"h":44},"fit3Px":{"x":62,"y":115,"w":20,"h":12}},
+        "TIME": {"sourcePx":{"x":310,"y":498,"w":440,"h":256},"fit3Px":{"x":81,"y":130,"w":115,"h":67}},
+        "SECONDS": {"sourcePx":{"x":409,"y":853,"w":176,"h":147},"fit3Px":{"x":107,"y":223,"w":46,"h":38}},
+        "WEATHER_ICON": {"sourcePx":{"x":240,"y":1094,"w":110,"h":74},"fit3Px":{"x":63,"y":286,"w":29,"h":19}},
+        "WEATHER_TEXT": {"sourcePx":{"x":370,"y":1115,"w":145,"h":45},"fit3Px":{"x":97,"y":292,"w":38,"h":12}},
+        "TEMP": {"sourcePx":{"x":650,"y":1110,"w":120,"h":50},"fit3Px":{"x":170,"y":291,"w":31,"h":13}},
+        "BATTERY_ICON": {"sourcePx":{"x":312,"y":1240,"w":111,"h":55},"fit3Px":{"x":82,"y":325,"w":29,"h":14}},
+        "BATTERY_PERCENT": {"sourcePx":{"x":534,"y":1241,"w":116,"h":49},"fit3Px":{"x":140,"y":325,"w":30,"h":13}}
+      }
+    },
+    {
+      "id": "design04_8942",
+      "sourceFile": "1000028942.png",
+      "dateMode": "COMPACT_SLASH",
+      "boxes": {
+        "DATE": {"sourcePx":{"x":210,"y":342,"w":105,"h":40},"fit3Px":{"x":55,"y":90,"w":27,"h":10}},
+        "WEEKDAY": {"sourcePx":{"x":400,"y":292,"w":180,"h":58},"fit3Px":{"x":105,"y":76,"w":47,"h":15}},
+        "BATTERY_ICON": {"sourcePx":{"x":660,"y":254,"w":95,"h":62},"fit3Px":{"x":173,"y":66,"w":25,"h":16}},
+        "BATTERY_PERCENT": {"sourcePx":{"x":668,"y":338,"w":102,"h":47},"fit3Px":{"x":175,"y":88,"w":27,"h":12}},
+        "AM_PM": {"sourcePx":{"x":180,"y":486,"w":110,"h":49},"fit3Px":{"x":47,"y":127,"w":29,"h":13}},
+        "TIME": {"sourcePx":{"x":225,"y":571,"w":410,"h":286},"fit3Px":{"x":59,"y":149,"w":107,"h":75}},
+        "SECONDS": {"sourcePx":{"x":691,"y":687,"w":95,"h":112},"fit3Px":{"x":181,"y":180,"w":25,"h":29}},
+        "WEATHER_ICON": {"sourcePx":{"x":224,"y":1000,"w":122,"h":180},"fit3Px":{"x":59,"y":262,"w":32,"h":47}},
+        "WEATHER_TEXT": {"sourcePx":{"x":377,"y":1040,"w":137,"h":100},"fit3Px":{"x":99,"y":272,"w":36,"h":26}},
+        "TEMP": {"sourcePx":{"x":644,"y":1040,"w":132,"h":100},"fit3Px":{"x":169,"y":272,"w":35,"h":26}}
+      }
+    }
+  ]
+}
