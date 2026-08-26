@@ -1,0 +1,158 @@
+name: FitFace v12 Formal Release
+
+on:
+  push:
+    tags:
+      - "v12.*"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  FITFACE_RELEASE_STORE_PASSWORD: ${{ secrets.FITFACE_RELEASE_STORE_PASSWORD }}
+  FITFACE_RELEASE_KEY_ALIAS: ${{ secrets.FITFACE_RELEASE_KEY_ALIAS }}
+  FITFACE_RELEASE_KEY_PASSWORD: ${{ secrets.FITFACE_RELEASE_KEY_PASSWORD }}
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Release helper tree
+        uses: actions/checkout@v4
+
+      - name: Validate required Release secrets
+        env:
+          FITFACE_RELEASE_KEYSTORE_BASE64: ${{ secrets.FITFACE_RELEASE_KEYSTORE_BASE64 }}
+          FITFACE_RELEASE_STORE_PASSWORD: ${{ secrets.FITFACE_RELEASE_STORE_PASSWORD }}
+          FITFACE_RELEASE_KEY_ALIAS: ${{ secrets.FITFACE_RELEASE_KEY_ALIAS }}
+          FITFACE_RELEASE_KEY_PASSWORD: ${{ secrets.FITFACE_RELEASE_KEY_PASSWORD }}
+        run: |
+          missing=0
+          for name in \
+            FITFACE_RELEASE_KEYSTORE_BASE64 \
+            FITFACE_RELEASE_STORE_PASSWORD \
+            FITFACE_RELEASE_KEY_ALIAS \
+            FITFACE_RELEASE_KEY_PASSWORD
+          do
+            if [ -z "${!name}" ]; then
+              echo "::error title=Missing Release secret::$name is required for a formal FitFace v12 Release."
+              missing=1
+            fi
+          done
+          test "$missing" -eq 0
+
+      - name: Restore and verify Release keystore
+        env:
+          FITFACE_RELEASE_KEYSTORE_BASE64: ${{ secrets.FITFACE_RELEASE_KEYSTORE_BASE64 }}
+        run: |
+          path="$RUNNER_TEMP/fitface-v12-release.keystore"
+          printf '%s' "$FITFACE_RELEASE_KEYSTORE_BASE64" | base64 -d > "$path"
+          test -s "$path"
+          keytool -list -v \
+            -keystore "$path" \
+            -storepass "$FITFACE_RELEASE_STORE_PASSWORD" \
+            -alias "$FITFACE_RELEASE_KEY_ALIAS" \
+            | grep -E 'Alias name|SHA256:'
+          echo "FITFACE_RELEASE_KEYSTORE=$path" >> "$GITHUB_ENV"
+
+      - name: Check out locked FitFace Studio upstream
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Validate Foundation contract
+        run: |
+          python3 -m unittest discover -s fitface-build -p 'test_*.py' -v
+          python3 fitface-build/run_manifest.py \
+            fitface-build/v12-foundation-manifest.json \
+            --helper-root . \
+            --check
+
+      - name: Apply locked Foundation pipeline
+        run: |
+          python3 fitface-build/run_manifest.py \
+            fitface-build/v12-foundation-manifest.json \
+            --helper-root . \
+            --target-root fitface-studio
+
+      - name: Apply v12 Release metadata and signing config
+        run: python3 fitface-release/apply_release_config.py fitface-studio
+
+      - name: Run Release contract tests
+        run: python3 -m unittest discover -s fitface-release -p 'test_*.py' -v
+
+      - name: Run Foundation focused regressions
+        working-directory: fitface-studio
+        run: |
+          mapfile -t TESTS < <(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('../fitface-build/v12-foundation-manifest.json').read_text())
+          for test_name in manifest['focused_tests']:
+              print(test_name)
+          PY
+          )
+          ARGS=()
+          for test_name in "${TESTS[@]}"; do
+            ARGS+=(--tests "*${test_name}*")
+          done
+          ./gradlew --no-daemon :core:format:testDebugUnitTest "${ARGS[@]}"
+
+      - name: Run editor regression suite
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :feature:editor:testDebugUnitTest
+
+      - name: Build signed Release APK
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :app:assembleRelease
+
+      - name: Verify Release APK identity, version, and signature
+        id: verify
+        run: |
+          apk="fitface-studio/app/build/outputs/apk/release/app-release.apk"
+          test -f "$apk"
+          app_id="$(apkanalyzer manifest application-id "$apk")"
+          version_code="$(apkanalyzer manifest version-code "$apk")"
+          version_name="$(apkanalyzer manifest version-name "$apk")"
+          test "$app_id" = "dev.fitface.studio.lcdcomposite.v11"
+          test "$version_code" = "120000"
+          test "$version_name" = "12.0.0"
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -n "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk" | tee release-signature.txt
+          mkdir -p release-output
+          out="release-output/FitFace-Studio-GSHOCK-LCD-v12.0.0-RELEASE.apk"
+          cp "$apk" "$out"
+          sha256sum "$out" | tee release-output/FitFace-Studio-GSHOCK-LCD-v12.0.0-RELEASE.sha256
+          cp release-signature.txt release-output/FitFace-Studio-GSHOCK-LCD-v12.0.0-RELEASE-signature.txt
+          echo "apk=$out" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified Release artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitFace-Studio-GSHOCK-LCD-v12.0.0-RELEASE
+          path: release-output/*
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish GitHub Release
+        if: github.ref_type == 'tag'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          APK: ${{ steps.verify.outputs.apk }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$APK" \
+            --title "FitFace v12.0.0" \
+            --notes "FitFace v12.0.0 signed Release build. Application ID: dev.fitface.studio.lcdcomposite.v11. versionCode: 120000. The Release workflow requires the configured FitFace Release keystore and never falls back to a debug or generated signing identity."
