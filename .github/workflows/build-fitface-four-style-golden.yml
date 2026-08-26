@@ -1,0 +1,48 @@
+name: FitFace Four-Style Golden Layout
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/**'
+
+permissions:
+  contents: read
+
+jobs:
+  red-inventory:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout helper branch
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned FitFace upstream
+        shell: bash
+        run: |
+          git clone https://github.com/satvikgosai/fitface-studio.git fitface-studio
+          git -C fitface-studio checkout 45a9788d3877627fd5301e9ebba36ef6192d7962
+
+      - name: Install Golden semantic inventory test
+        shell: bash
+        run: |
+          cp fitface-layout-golden/Samsung00049SemanticInventoryTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+
+      - name: RED — real 00049 fixture must be absent
+        shell: bash
+        run: |
+          set +e
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
+            > ../red.log 2>&1
+          status=$?
+          set -e
+          cat ../red.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected RED failure but test passed.' >&2
+            exit 1
+          fi
+          grep -F 'real Samsung 00049 fixture must be staged by CI' ../red.log
+          echo 'RED confirmed: semantic test fails only because the real 00049 fixture is absent.'
