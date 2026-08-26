@@ -1,0 +1,143 @@
+{
+  "schema_version": 1,
+  "upstream": {
+    "repository": "satvikgosai/fitface-studio",
+    "commit": "45a9788d3877627fd5301e9ebba36ef6192d7962"
+  },
+  "locks": {
+    "application_id": "dev.fitface.studio.lcdcomposite.v11",
+    "logical_color": "#B8B8AD",
+    "optical_rgb888": "#B5B6BD",
+    "optical_rgb565": "0xB5B7"
+  },
+  "steps": [
+    {
+      "id": "install-lcd-helpers-tests",
+      "commands": [
+        "cp {helper}/fitface-lcd-color/SpriteTint.kt {target}/core/format/src/main/kotlin/dev/fitface/studio/core/format/SpriteTint.kt",
+        "cp {helper}/fitface-lcd-color/LcdPalette.kt {target}/core/model/src/main/kotlin/dev/fitface/studio/core/model/LcdPalette.kt",
+        "cp {helper}/fitface-lcd-color/LcdSpriteTintTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdSpriteTintTest.kt",
+        "cp {helper}/fitface-lcd-color/LcdPaletteTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdPaletteTest.kt",
+        "cp {helper}/fitface-lcd-color/CompositeColorOverrideTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/CompositeColorOverrideTest.kt",
+        "cp {helper}/fitface-lcd-color/StaticRasterTintTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticRasterTintTest.kt",
+        "cp {helper}/fitface-lcd-color/StaticAlphaMaskTintTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticAlphaMaskTintTest.kt",
+        "cp {helper}/fitface-lcd-color/AnchoredPairColorTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/AnchoredPairColorTest.kt",
+        "cp {helper}/fitface-lcd-color/DuplicateSequencePairColorTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/DuplicateSequencePairColorTest.kt",
+        "cp {helper}/fitface-lcd-color/ClockSpriteColorGroupTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/ClockSpriteColorGroupTest.kt",
+        "cp {helper}/fitface-lcd-color/CasioClockChromeToneTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/CasioClockChromeToneTest.kt",
+        "cp {helper}/fitface-lcd-color/Samsung00003ForegroundToneTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/Samsung00003ForegroundToneTest.kt",
+        "cp {helper}/fitface-lcd-color/Samsung00003ClockOpticalCompensationTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/Samsung00003ClockOpticalCompensationTest.kt",
+        "cp {helper}/fitface-lcd-color/Samsung00003ClockOpticalV11Test.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/Samsung00003ClockOpticalV11Test.kt"
+      ]
+    },
+    {
+      "id": "sequence-foundation",
+      "commands": [
+        "sed -i 's/if count != 1:/if count < 1:/' {helper}/fitface-sequence-experiment/apply_patch.py",
+        "python3 {helper}/fitface-sequence-experiment/apply_patch.py {target}",
+        "cp {helper}/fitface-sequence-experiment/SequenceOverrideTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/SequenceOverrideTest.kt"
+      ]
+    },
+    {
+      "id": "pair-binding",
+      "commands": [
+        "python3 {helper}/fitface-pair-binding/apply_patch.py {target}",
+        "cp {helper}/fitface-pair-binding/PairBindingOverrideTest.kt {target}/core/format/src/test/kotlin/dev/fitface/studio/core/format/PairBindingOverrideTest.kt"
+      ]
+    },
+    {
+      "id": "sprite-pair-lcd-controls",
+      "commands": [
+        "sed -i 's/if count != 1:/if count < 1:/' {helper}/fitface-lcd-color/apply_patch.py",
+        "python3 {helper}/fitface-lcd-color/apply_patch.py {target}"
+      ]
+    },
+    {
+      "id": "rgb565-alpha-mask",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_sprite_alpha_mask_fix.py {target}"
+      ]
+    },
+    {
+      "id": "clock-sprite-group",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_clock_sprite_group_color_fix.py {target}"
+      ]
+    },
+    {
+      "id": "composite-color",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_composite_color_patch.py {target}"
+      ]
+    },
+    {
+      "id": "static-raster-color",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_static_color_patch.py {target}"
+      ]
+    },
+    {
+      "id": "casio-clock-chrome",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_casio_clock_chrome_tone_fix.py {target}"
+      ]
+    },
+    {
+      "id": "samsung00003-foreground",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_samsung00003_foreground_tone_fix.py {target}"
+      ]
+    },
+    {
+      "id": "samsung00003-v10-optical-baseline",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_samsung00003_clock_optical_compensation.py {target}"
+      ]
+    },
+    {
+      "id": "samsung00003-v11-patch15",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_samsung00003_clock_optical_v11.py {target}"
+      ]
+    },
+    {
+      "id": "pair-normalization",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/normalize_pair_color_anchor.py {target}"
+      ]
+    },
+    {
+      "id": "hardware-nonsprite",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_hardware_color_fix.py {target}"
+      ]
+    },
+    {
+      "id": "bright-lcd-label",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_bright_lcd_label.py {target}"
+      ]
+    },
+    {
+      "id": "application-id",
+      "commands": [
+        "sed -i 's/applicationId = \"dev.fitface.studio\"/applicationId = \"dev.fitface.studio.lcdcomposite.v11\"/' {target}/app/build.gradle.kts"
+      ]
+    }
+  ],
+  "focused_tests": [
+    "LcdSpriteTintTest",
+    "LcdPaletteTest",
+    "CompositeColorOverrideTest",
+    "StaticRasterTintTest",
+    "StaticAlphaMaskTintTest",
+    "AnchoredPairColorTest",
+    "DuplicateSequencePairColorTest",
+    "ClockSpriteColorGroupTest",
+    "CasioClockChromeToneTest",
+    "Samsung00003ForegroundToneTest",
+    "Samsung00003ClockOpticalV11Test",
+    "SequenceOverrideTest",
+    "PairBindingOverrideTest"
+  ]
+}
