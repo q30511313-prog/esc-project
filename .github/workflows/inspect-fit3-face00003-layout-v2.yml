@@ -1,0 +1,31 @@
+name: Inspect Fit3 00003 Layout Semantics v2
+
+on:
+  push:
+    branches:
+      - work/fitface-layout-production
+    paths:
+      - '.github/workflows/inspect-fit3-face00003-layout-v2.yml'
+      - 'fitface-layout/inspect_face00003.py'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-layout-v2:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run semantic inventory analyzer
+        shell: bash
+        run: python3 fitface-layout/inspect_face00003.py
+
+      - name: Upload semantic inventory
+        uses: actions/upload-artifact@v4
+        with:
+          name: fit3-face00003-layout-semantic-inventory-v2
+          path: out
+          if-no-files-found: error
+          retention-days: 3
