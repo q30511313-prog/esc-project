@@ -98,7 +98,7 @@ class ReleaseConfigContractTest(unittest.TestCase):
         for token in (
             'v12.*',
             ':app:assembleRelease',
-            'apksigner verify',
+            'verify --verbose --print-certs',
             'version-code',
             'version-name',
             'dev.fitface.studio.lcdcomposite.v11',
