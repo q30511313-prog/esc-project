@@ -1,0 +1,40 @@
+{
+  "baseFace": "SM-R390_00049_256x402",
+  "style": "style0.bin",
+  "design": 1,
+  "boxes": {
+    "DATE": [65, 47, 126, 17],
+    "WEEKDAY": [107, 80, 42, 14],
+    "AM_PM": [48, 120, 25, 16],
+    "TIME": [77, 139, 127, 73],
+    "SECONDS": [48, 257, 47, 30],
+    "WEATHER_ICON": [98, 253, 59, 46],
+    "WEATHER_TEXT": [112, 301, 37, 16],
+    "TEMP": [171, 260, 42, 25],
+    "BATTERY_ICON": [47, 337, 27, 20],
+    "BATTERY_PERCENT": [82, 336, 35, 21]
+  },
+  "semantics": {
+    "secondsTens": 14,
+    "secondsOnes": 15,
+    "amPm": 5,
+    "weekday": 17,
+    "year": 24,
+    "month": 21,
+    "day": 18,
+    "temperature": 62,
+    "weather": 69,
+    "battery": 37
+  },
+  "secondsDonors": {
+    "tens": {"globalIndex": 15, "sequence": 29, "x": 23, "y": 360, "binding": 2},
+    "ones": {"globalIndex": 16, "sequence": 48, "x": 101, "y": 360, "binding": 2}
+  },
+  "secondsPlacement": {
+    "tens": [48, 257],
+    "ones": [72, 257]
+  },
+  "hardwareProof": {
+    "pairSeconds14And15": true
+  }
+}
