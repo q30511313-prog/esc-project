@@ -143,3 +143,27 @@ jobs:
             --tests dev.fitface.studio.core.format.Samsung00049SecondsCompilerTest \
             --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
             --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest
+
+      - name: Install Golden AM PM compiler test
+        shell: bash
+        run: |
+          cp fitface-layout-golden/Samsung00049AmPmCompilerTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+
+      - name: RED — Golden AM PM compiler method does not exist yet
+        shell: bash
+        run: |
+          set +e
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmCompilerTest \
+            > ../ampm-red.log 2>&1
+          status=$?
+          set -e
+          cat ../ampm-red.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected AM/PM compiler RED failure but test passed.' >&2
+            exit 1
+          fi
+          grep -F "Unresolved reference 'compileAmPm'" ../ampm-red.log
+          echo 'Golden AM/PM RED confirmed: compiler method is missing.'
