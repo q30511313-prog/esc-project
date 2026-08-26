@@ -1,25 +1,181 @@
-name: FitFace v12 Release RED Contract
+name: FitFace v12 Release Verification
 
 on:
   push:
     branches:
       - work/fitface-v12-release
     paths:
+      - 'fitface-build/**'
       - 'fitface-release/**'
       - '.github/workflows/build-fitface-v12-release.yml'
+      - '.github/workflows/release-fitface-v12.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
-  red-contract:
+  release-verification:
     runs-on: ubuntu-latest
     steps:
-      - name: Check out Release branch
+      - name: Check out Release helper tree
         uses: actions/checkout@v4
         with:
           ref: work/fitface-v12-release
+          path: helper
 
-      - name: RED - run Release contract tests
-        run: python3 -m unittest discover -s fitface-release -p 'test_*.py' -v
+      - name: Run Foundation and Release contract tests
+        run: |
+          python3 -m unittest discover -s helper/fitface-build -p 'test_*.py' -v
+          python3 -m unittest discover -s helper/fitface-release -p 'test_*.py' -v
+          python3 helper/fitface-build/run_manifest.py \
+            helper/fitface-build/v12-foundation-manifest.json \
+            --helper-root helper \
+            --check
+
+      - name: Check out locked Foundation upstream tree
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: foundation-fitface-studio
+
+      - name: Check out locked Release upstream tree
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: release-fitface-studio
+
+      - name: Apply unchanged Foundation pipeline to both trees
+        run: |
+          python3 helper/fitface-build/run_manifest.py \
+            helper/fitface-build/v12-foundation-manifest.json \
+            --helper-root helper \
+            --target-root foundation-fitface-studio
+          python3 helper/fitface-build/run_manifest.py \
+            helper/fitface-build/v12-foundation-manifest.json \
+            --helper-root helper \
+            --target-root release-fitface-studio
+
+      - name: Apply v12 Release metadata and signing config
+        run: python3 helper/fitface-release/apply_release_config.py release-fitface-studio
+
+      - name: Prove Release source delta is only app build configuration
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          left = Path('foundation-fitface-studio')
+          right = Path('release-fitface-studio')
+
+          def snapshot(root):
+              result = {}
+              for path in root.rglob('*'):
+                  if not path.is_file() or '.git' in path.parts:
+                      continue
+                  result[path.relative_to(root).as_posix()] = path.read_bytes()
+              return result
+
+          a = snapshot(left)
+          b = snapshot(right)
+          changed = sorted(
+              name for name in set(a) | set(b)
+              if a.get(name) != b.get(name)
+          )
+          print('Release source delta:', changed)
+          expected = ['app/build.gradle.kts']
+          if changed != expected:
+              raise SystemExit(f'unexpected Release source delta: {changed}')
+          PY
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+
+      - name: Create explicit CI verification signing key
+        run: |
+          path="$RUNNER_TEMP/fitface-v12-verification.keystore"
+          keytool -genkeypair \
+            -keystore "$path" \
+            -storepass "verification-only" \
+            -alias "fitface-v12-verification" \
+            -keypass "verification-only" \
+            -dname "CN=FitFace v12 CI Verification,O=FitFace Verification,C=KR" \
+            -keyalg RSA \
+            -keysize 2048 \
+            -validity 1
+          echo "FITFACE_RELEASE_KEYSTORE=$path" >> "$GITHUB_ENV"
+          echo "FITFACE_RELEASE_STORE_PASSWORD=verification-only" >> "$GITHUB_ENV"
+          echo "FITFACE_RELEASE_KEY_ALIAS=fitface-v12-verification" >> "$GITHUB_ENV"
+          echo "FITFACE_RELEASE_KEY_PASSWORD=verification-only" >> "$GITHUB_ENV"
+
+      - name: Run Foundation focused regressions under Release config
+        working-directory: release-fitface-studio
+        run: |
+          mapfile -t TESTS < <(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('../helper/fitface-build/v12-foundation-manifest.json').read_text())
+          for test_name in manifest['focused_tests']:
+              print(test_name)
+          PY
+          )
+          ARGS=()
+          for test_name in "${TESTS[@]}"; do
+            ARGS+=(--tests "*${test_name}*")
+          done
+          ./gradlew --no-daemon :core:format:testDebugUnitTest "${ARGS[@]}"
+
+      - name: Run editor regression suite under Release config
+        working-directory: release-fitface-studio
+        run: ./gradlew --no-daemon :feature:editor:testDebugUnitTest
+
+      - name: Build signed Release verification APK
+        working-directory: release-fitface-studio
+        run: ./gradlew --no-daemon :app:assembleRelease
+
+      - name: Verify Release APK identity, version, signature, and hash
+        run: |
+          apk="release-fitface-studio/app/build/outputs/apk/release/app-release.apk"
+          test -f "$apk"
+
+          analyzer="$(command -v apkanalyzer || true)"
+          if [ -z "$analyzer" ]; then
+            analyzer="$(find "$ANDROID_HOME/cmdline-tools" -type f -name apkanalyzer 2>/dev/null | sort -V | tail -1)"
+          fi
+          test -n "$analyzer"
+          app_id="$("$analyzer" manifest application-id "$apk")"
+          version_code="$("$analyzer" manifest version-code "$apk")"
+          version_name="$("$analyzer" manifest version-name "$apk")"
+          echo "applicationId=$app_id"
+          echo "versionCode=$version_code"
+          echo "versionName=$version_name"
+          test "$app_id" = "dev.fitface.studio.lcdcomposite.v11"
+          test "$version_code" = "120000"
+          test "$version_name" = "12.0.0"
+
+          apksigner="$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -1)"
+          test -n "$apksigner"
+          "$apksigner" verify --verbose --print-certs "$apk" | tee release-verification-signature.txt
+
+          mkdir -p release-verification-output
+          out="release-verification-output/FitFace-Studio-GSHOCK-LCD-v12.0.0-RELEASE-VERIFICATION.apk"
+          cp "$apk" "$out"
+          sha256sum "$out" | tee release-verification-output/FitFace-Studio-GSHOCK-LCD-v12.0.0-RELEASE-VERIFICATION.sha256
+          cp release-verification-signature.txt release-verification-output/FitFace-Studio-GSHOCK-LCD-v12.0.0-RELEASE-VERIFICATION-signature.txt
+
+      - name: Upload Release verification artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitFace-Studio-GSHOCK-LCD-v12.0.0-RELEASE-VERIFICATION
+          path: release-verification-output/*
+          if-no-files-found: error
+          retention-days: 90
