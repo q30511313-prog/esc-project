@@ -1,0 +1,25 @@
+name: FitFace v12 Release RED Contract
+
+on:
+  push:
+    branches:
+      - work/fitface-v12-release
+    paths:
+      - 'fitface-release/**'
+      - '.github/workflows/build-fitface-v12-release.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  red-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Release branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/fitface-v12-release
+
+      - name: RED - run Release contract tests
+        run: python3 -m unittest discover -s fitface-release -p 'test_*.py' -v
