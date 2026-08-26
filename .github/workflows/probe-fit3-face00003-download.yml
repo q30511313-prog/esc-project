@@ -1,0 +1,35 @@
+name: Probe Fit3 00003 Download Contract
+
+on:
+  push:
+    branches:
+      - work/fitface-layout-production
+    paths:
+      - '.github/workflows/probe-fit3-face00003-download.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe Samsung download endpoint
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, time, urllib.parse, urllib.request
+          appid='com.samsung.fit3watchface.sm_r390_0003'
+          hv=base64.b64encode(hashlib.sha1((appid+'GALAXYAPPSAPI').encode('latin1')).digest()).decode()
+          params={
+            'csc':'NONE','sdkVer':'36','callerId':'com.samsung.wearable.fit3plugin',
+            'versionCode':'126071051','mcc':'450','mnc':'10',
+            'systemId':str(int(time.time()*1000)-86400000),
+            'extuk':'0123456789abcdef','abiType':'64','deviceId':'SM-R390',
+            'loginType':'N','oneUiVersion':'0','cc':'KOR','pd':'0',
+            'appInfo':appid,'hashValue':hv,
+          }
+          url='https://vas.samsungapps.com/vas/stub/gearAppDownload.as?'+urllib.parse.urlencode(params)
+          raw=urllib.request.urlopen(urllib.request.Request(url,headers={'User-Agent':'Mozilla/5.0'}),timeout=30).read()
+          print(raw.decode('utf-8','replace'))
+          PY
