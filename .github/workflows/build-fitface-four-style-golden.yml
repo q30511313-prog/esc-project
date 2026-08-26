@@ -183,3 +183,28 @@ jobs:
             --tests dev.fitface.studio.core.format.Samsung00049SecondsCompilerTest \
             --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
             --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest
+
+      - name: Install Golden date compiler test
+        shell: bash
+        run: |
+          cp fitface-layout-golden/Samsung00049DateCompilerTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+
+      - name: RED — Golden date compiler does not exist yet
+        shell: bash
+        run: |
+          set +e
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049DateCompilerTest \
+            > ../date-red.log 2>&1
+          status=$?
+          set -e
+          cat ../date-red.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected date compiler RED failure but test passed.' >&2
+            exit 1
+          fi
+          grep -F "Unresolved reference 'GoldenDateCompiler'" ../date-red.log
+          grep -F "Unresolved reference 'GoldenDateMode'" ../date-red.log
+          echo 'Golden date RED confirmed: date compiler is missing.'
