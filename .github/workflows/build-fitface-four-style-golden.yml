@@ -129,11 +129,11 @@ jobs:
           grep -F "Unresolved reference 'GoldenSemanticCompiler'" ../seconds-red.log
           echo 'Golden seconds RED confirmed: compiler is missing.'
 
-      - name: Install Golden seconds compiler
+      - name: Install seconds-only compiler baseline
         shell: bash
         run: |
-          cp fitface-layout-golden/GoldenSemanticCompiler.kt \
-            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/GoldenSemanticCompilerSecondsOnly.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenSemanticCompiler.kt
 
       - name: GREEN — live seconds compiler and regressions
         shell: bash
@@ -167,3 +167,19 @@ jobs:
           fi
           grep -F "Unresolved reference 'compileAmPm'" ../ampm-red.log
           echo 'Golden AM/PM RED confirmed: compiler method is missing.'
+
+      - name: Install full Golden compiler
+        shell: bash
+        run: |
+          cp fitface-layout-golden/GoldenSemanticCompiler.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenSemanticCompiler.kt
+
+      - name: GREEN — live AM PM, seconds, and regressions
+        shell: bash
+        run: |
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SecondsCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
+            --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest
