@@ -125,9 +125,9 @@ class Samsung00049PairSequenceRemapTest {
     }
 
     private fun real00049(): Fit3Container {
-        val stream = javaClass.getResourceAsStream(
-            "/fixtures/SM-R390_00049_256x402.bin",
-        ) ?: fail("real Samsung 00049 fixture must be staged by CI")
+        val stream = requireNotNull(
+            javaClass.getResourceAsStream("/fixtures/SM-R390_00049_256x402.bin"),
+        ) { "real Samsung 00049 fixture must be staged by CI" }
         return Fit3Container.parse(stream.readBytes()).also {
             assertTrue(it.validate().isValid)
         }
