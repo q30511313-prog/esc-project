@@ -88,7 +88,7 @@ v11 Stable의 앱 동작과 실기기 승인 결과를 그대로 유지하면서
 
 ## 6. Manifest 구조
 
-최상위 필드:
+최상위 필드는 아래 형태로 고정한다. 예시는 실제 허용되는 값과 command 형식을 보여준다.
 
 ```json
 {
@@ -105,11 +105,16 @@ v11 Stable의 앱 동작과 실기기 승인 결과를 그대로 유지하면서
   },
   "steps": [
     {
-      "id": "install-lcd-helpers-tests",
-      "commands": ["..."]
+      "id": "rgb565-alpha-mask",
+      "commands": [
+        "python3 {helper}/fitface-lcd-color/apply_sprite_alpha_mask_fix.py {target}"
+      ]
     }
   ],
-  "focused_tests": ["LcdSpriteTintTest", "..."]
+  "focused_tests": [
+    "LcdSpriteTintTest",
+    "Samsung00003ClockOpticalV11Test"
+  ]
 }
 ```
 
