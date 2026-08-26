@@ -1,0 +1,29 @@
+name: Scan All Fit3 Semantic Bases
+
+on:
+  push:
+    branches:
+      - work/fitface-layout-production
+    paths:
+      - '.github/workflows/scan-fit3-all-semantic-bases.yml'
+      - 'fitface-layout/scan_all_semantic_bases.py'
+
+permissions:
+  contents: read
+
+jobs:
+  scan-all:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan all stock faces
+        shell: bash
+        run: python3 fitface-layout/scan_all_semantic_bases.py
+      - name: Upload full semantic ranking
+        uses: actions/upload-artifact@v4
+        with:
+          name: fit3-all-semantic-base-ranking
+          path: out_all_bases
+          if-no-files-found: error
+          retention-days: 3
