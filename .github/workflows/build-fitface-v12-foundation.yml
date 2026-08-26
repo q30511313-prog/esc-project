@@ -1,0 +1,25 @@
+name: FitFace v12 Foundation RED Contract
+
+on:
+  push:
+    branches:
+      - work/fitface-v12-foundation
+    paths:
+      - 'fitface-build/**'
+      - '.github/workflows/build-fitface-v12-foundation.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  red-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Foundation branch
+        uses: actions/checkout@v4
+        with:
+          ref: work/fitface-v12-foundation
+
+      - name: RED - run Foundation manifest contract tests
+        run: python3 -m unittest discover -s fitface-build -p 'test_*.py' -v
