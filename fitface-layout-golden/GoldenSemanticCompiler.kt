@@ -4,10 +4,66 @@ package dev.fitface.studio.core.format
  * Compiles the first Golden-layout live semantics into Samsung 00049 style0.
  *
  * This deliberately fails closed against the exact pristine donor identities proven
- * by Samsung00049SecondsCompilerTest. It does not create new records, resize the
- * container, or touch sibling styles.
+ * by the Golden compiler tests. It does not create new records, resize the container,
+ * or touch sibling styles.
  */
 object GoldenSemanticCompiler {
+    fun compileAmPm(
+        source: Fit3Container,
+        entryBasename: String,
+        x: Int,
+        y: Int,
+    ): ContainerEdit {
+        if (entryBasename != "style0.bin") {
+            throw Fit3FormatException(
+                "Golden AM/PM donor contract is defined only for style0.bin",
+            )
+        }
+
+        val entry = source.entryByBasename(entryBasename)
+        val donor = FaceRecordParser.scanWidgets(entry).singleOrNull {
+            it.widgetType == WIDGET_PAIR &&
+                it.globalIndex == 9 &&
+                it.sequenceId == 41 &&
+                it.x == 172 &&
+                it.y == 217
+        } ?: throw Fit3FormatException(
+            "Golden AM/PM donor g9/seq41@(172,217) is missing or ambiguous",
+        )
+        val bindingWord = donor.words.getOrNull(1) ?: throw Fit3FormatException(
+            "Golden AM/PM donor g9 has no Pair binding/layout word",
+        )
+        if ((bindingWord.toInt() and 0xFF) != 1) {
+            throw Fit3FormatException(
+                "Golden AM/PM donor g9 must retain text binding 1",
+            )
+        }
+
+        val semantic = FaceEditor.remapPairSequence(
+            source = source,
+            entryBasename = entryBasename,
+            globalIndex = 9,
+            originalSequenceId = 41,
+            x = 172,
+            y = 217,
+            newSequenceId = 5,
+        )
+        val moved = FaceEditor.moveWidget(
+            source = semantic.container,
+            entryBasename = entryBasename,
+            globalIndex = 9,
+            widgetType = WIDGET_PAIR,
+            sequenceId = 5,
+            x = x,
+            y = y,
+        )
+        return ContainerEdit(
+            container = moved.container,
+            changedPayloadBytes = semantic.changedPayloadBytes + moved.changedPayloadBytes,
+            changedStyles = listOf(entryBasename),
+        )
+    }
+
     fun compileSeconds(
         source: Fit3Container,
         entryBasename: String,
