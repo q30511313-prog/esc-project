@@ -85,5 +85,22 @@ jobs:
             echo 'Expected Pair remap RED failure but test passed.' >&2
             exit 1
           fi
-          grep -F 'remapPairSequence' ../pair-remap-red.log
+          grep -F "Unresolved reference 'remapPairSequence'" ../pair-remap-red.log
+          if grep -F "Unresolved reference 'readBytes'" ../pair-remap-red.log; then
+            echo 'Pair RED is contaminated by a test-helper compile error.' >&2
+            exit 1
+          fi
           echo 'Pair remap RED confirmed: production API is missing.'
+
+      - name: Apply minimal Golden format patch
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+
+      - name: GREEN — Pair remap and inventory regressions
+        shell: bash
+        run: |
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
+            --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest
