@@ -12,7 +12,7 @@ permissions:
   contents: read
 
 jobs:
-  inventory-red-green:
+  golden-tdd:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout helper branch
@@ -37,18 +37,18 @@ jobs:
           cd fitface-studio
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
             --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
-            > ../red.log 2>&1
+            > ../inventory-red.log 2>&1
           status=$?
           set -e
-          cat ../red.log
+          cat ../inventory-red.log
           if [ "$status" -eq 0 ]; then
-            echo 'Expected RED failure but test passed.' >&2
+            echo 'Expected inventory RED failure but test passed.' >&2
             exit 1
           fi
           result='core/format/build/test-results/testDebugUnitTest/TEST-dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest.xml'
           test -f "$result"
           grep -F 'real Samsung 00049 fixture must be staged by CI' "$result"
-          echo 'RED confirmed: only the missing real 00049 fixture blocks the inventory test.'
+          echo 'Inventory RED confirmed.'
 
       - name: Stage real Samsung 00049 fixture
         shell: bash
@@ -63,3 +63,27 @@ jobs:
           cd fitface-studio
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
             --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest
+
+      - name: Install Pair sequence remap test
+        shell: bash
+        run: |
+          cp fitface-layout-golden/Samsung00049PairSequenceRemapTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+
+      - name: RED — Pair semantic remap API does not exist yet
+        shell: bash
+        run: |
+          set +e
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest \
+            > ../pair-remap-red.log 2>&1
+          status=$?
+          set -e
+          cat ../pair-remap-red.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected Pair remap RED failure but test passed.' >&2
+            exit 1
+          fi
+          grep -F 'remapPairSequence' ../pair-remap-red.log
+          echo 'Pair remap RED confirmed: production API is missing.'
