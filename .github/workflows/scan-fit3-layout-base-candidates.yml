@@ -1,0 +1,28 @@
+name: Scan Fit3 Layout Base Candidates
+
+on:
+  push:
+    branches:
+      - work/fitface-layout-production
+    paths:
+      - '.github/workflows/scan-fit3-layout-base-candidates.yml'
+      - 'fitface-layout/scan_candidate_bases.py'
+
+permissions:
+  contents: read
+
+jobs:
+  scan-bases:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan candidate stock faces
+        shell: bash
+        run: python3 fitface-layout/scan_candidate_bases.py
+      - name: Upload candidate scan
+        uses: actions/upload-artifact@v4
+        with:
+          name: fit3-layout-base-candidate-scan
+          path: out_candidates
+          if-no-files-found: error
+          retention-days: 3
