@@ -40,10 +40,10 @@ class Samsung00003ForegroundToneTest {
         val afterComposite = afterRecords.single { it.widgetType == WIDGET_COMP }
 
         // #B8B8AD remains the logical/user-facing Casio tone. On the proven
-        // Samsung 00003 black style, v10 uses the human-eye midpoint optical
-        // calibration #B8C0A1 after v9's #B8C794 looked visibly too green.
-        assertEquals(0xFFB8C0A1L, afterPair.words[0])
-        assertEquals(0xFFB8C0A1L, afterComposite.words[13])
+        // Samsung 00003 black style, v11 uses the physical-device-selected
+        // calibration patch 15: representative #B5B6BD / RGB565 0xB5B7.
+        assertEquals(0xFFB5B6BDL, afterPair.words[0])
+        assertEquals(0xFFB5B6BDL, afterComposite.words[13])
 
         // Only the proven color words may change.
         assertEquals(0x11223344L, afterComposite.words[12])
