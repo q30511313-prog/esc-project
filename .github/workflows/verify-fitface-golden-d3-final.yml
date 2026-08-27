@@ -18,6 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       GOLDEN_D3_ARTIFACT_DIR: ${{ github.workspace }}/out
+      GOLDEN_D2_ARTIFACT_DIR: ${{ github.workspace }}/out/d2-regression
       GOLDEN_ARTIFACT_DIR: ${{ github.workspace }}/out
     steps:
       - name: Check out helper tree
