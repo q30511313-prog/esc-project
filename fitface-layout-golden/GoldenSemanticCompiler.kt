@@ -77,14 +77,20 @@ object GoldenSemanticCompiler {
         val bindingWord = donor.words.getOrNull(1) ?: throw Fit3FormatException(
             "Golden AM/PM donor g9 has no Pair binding/layout word",
         )
-        if ((bindingWord.toInt() and 0xFF) != 1) {
+        if ((bindingWord.toInt() and 0xFF) != 1 ||
+            donor.words.getOrNull(2) != 0x0001FFFFL
+        ) {
             throw Fit3FormatException(
-                "Golden AM/PM donor g9 must retain text binding 1",
+                "Golden AM/PM donor g9 must retain pristine binding1/FFFF locale wiring",
             )
         }
 
-        val semantic = FaceEditor.remapPairSequence(
+        val locale = GoldenAmPmLocaleEditor.wire00049(
             source = source,
+            entryBasename = entryBasename,
+        )
+        val semantic = FaceEditor.remapPairSequence(
+            source = locale.container,
             entryBasename = entryBasename,
             globalIndex = 9,
             originalSequenceId = 41,
@@ -103,7 +109,8 @@ object GoldenSemanticCompiler {
         )
         return ContainerEdit(
             container = moved.container,
-            changedPayloadBytes = semantic.changedPayloadBytes + moved.changedPayloadBytes,
+            changedPayloadBytes = locale.changedPayloadBytes +
+                semantic.changedPayloadBytes + moved.changedPayloadBytes,
             changedStyles = listOf(entryBasename),
         )
     }
