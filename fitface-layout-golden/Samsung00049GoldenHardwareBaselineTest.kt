@@ -7,9 +7,9 @@ import org.junit.Test
 
 class Samsung00049GoldenHardwareBaselineTest {
     @Test
-    fun appliesGoldenD1OnlyToSamsung00049() {
+    fun appliesFullGoldenD1LayoutOnlyToSamsung00049() {
         val pristine = real00049()
-        val expected = GoldenD1Compiler.compile(pristine).container
+        val expected = GoldenD1LayoutCompiler.compile(pristine).container
 
         val actual = GoldenHardwareBaseline.resolve(
             faceId = "00049",
