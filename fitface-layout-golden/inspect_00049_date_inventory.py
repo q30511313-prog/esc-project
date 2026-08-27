@@ -28,22 +28,7 @@ def printable_ascii(blob):
     return ''.join(chr(byte) if 32 <= byte < 127 else '.' for byte in blob)
 
 
-def main():
-    path = Path(sys.argv[1])
-    data = path.read_bytes()
-    entry_count = u32(data, 12)
-    entries = {}
-    entry_meta = {}
-    for index in range(entry_count):
-        record = 32 + index * 74
-        raw_path = data[record:record + 64].split(b'\0', 1)[0].decode('utf-8', 'replace')
-        offset = u32(data, record + 64)
-        size = u32(data, record + 68)
-        name = Path(raw_path).name
-        entries[name] = data[offset:offset + size]
-        entry_meta[name] = {'index': index, 'path': raw_path, 'offset': offset, 'size': size}
-
-    style = entries['style0.bin']
+def parse_style(style):
     image_offset = u32(style, 20)
     cursor = 24
     records = []
@@ -76,36 +61,65 @@ def main():
             'words': [f'0x{word:08X}' for word in words],
         })
         cursor += record_size
+    return records
 
+
+def main():
+    path = Path(sys.argv[1])
+    data = path.read_bytes()
+    entry_count = u32(data, 12)
+    entries = {}
+    entry_meta = {}
+    for index in range(entry_count):
+        record = 32 + index * 74
+        raw_path = data[record:record + 64].split(b'\0', 1)[0].decode('utf-8', 'replace')
+        offset = u32(data, record + 64)
+        size = u32(data, record + 68)
+        name = Path(raw_path).name
+        entries[name] = data[offset:offset + size]
+        entry_meta[name] = {'index': index, 'path': raw_path, 'offset': offset, 'size': size}
+
+    style_records = {
+        name: parse_style(entries[name])
+        for name in ('style0.bin', 'style1.bin', 'style2.bin', 'style3.bin')
+        if name in entries
+    }
+    records = style_records['style0.bin']
     composite_candidates = [r for r in records if r['type'] == 13]
     pair_candidates = [r for r in records if r['type'] == 5]
 
-    # Composite word1 has the form 0x0008xxxx on Samsung 00049. The low 16-bit
-    # binding differentiates the native temperature (7) and battery (9) renderer
-    # resources. Dump those exact font entries plus neighboring font entries so the
-    # colour path can be proven rather than guessed from a sentinel-heavy record.
+    # Compare the exact live-source Composite records across all four stock styles.
+    # 0xFFFF003E = temperature source 62, 0xFFFF0025 = battery source 37.
+    # This determines whether 0xFFFFFFFF at words[13] is a legitimate white colour
+    # value or an unrelated sentinel by looking for the same renderer shape elsewhere.
+    cross_style_composites = {}
+    for style_name, style in style_records.items():
+        selected = []
+        for record in style:
+            if record['type'] != 13:
+                continue
+            first_word = record['words'][0] if record['words'] else None
+            if first_word in {'0xFFFF003E', '0xFFFF0025', '0xFFFF0015'}:
+                selected.append(record)
+        cross_style_composites[style_name] = selected
+
     font_names = sorted(name for name in entries if name.startswith('font_') and name.endswith('.bin'))
     font_report = {}
     for name in font_names:
         blob = entries[name]
         font_report[name] = {
             **entry_meta[name],
-            'headHex': blob[:128].hex(),
             'headAscii': printable_ascii(blob[:128]),
             'headWords32': words32(blob[:128]),
         }
 
     report = {
-        'compositeCandidates': composite_candidates,
-        'targetComposites': [
+        'targetCompositesStyle0': [
             r for r in composite_candidates
             if r['globalIndex'] in {1, 8, 11}
         ],
-        'pairCandidates': pair_candidates,
-        'remainingAfterSecondsAndAmPm': [
-            r for r in pair_candidates
-            if r['globalIndex'] not in {9, 15, 16}
-        ],
+        'crossStyleLiveComposites': cross_style_composites,
+        'pairCandidatesStyle0': pair_candidates,
         'fontEntries': font_report,
     }
     print('00049_COLOR_INVENTORY_JSON=' + json.dumps(report, ensure_ascii=False, separators=(',', ':')))
