@@ -1,0 +1,235 @@
+name: Verify FitFace Golden Task 8 Final Artifacts
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/**'
+      - 'fitface-build/**'
+      - '.github/workflows/verify-fitface-golden-task8-final.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  task8-final-verification:
+    runs-on: ubuntu-latest
+    env:
+      GOLDEN_ARTIFACT_DIR: ${{ github.workspace }}/out
+    steps:
+      - name: Check out Golden helper tree
+        uses: actions/checkout@v4
+        with:
+          ref: work/fitface-four-style-golden
+          path: helper
+
+      - name: Check out pinned FitFace Studio upstream
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify and apply locked Foundation v11/v12 stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 helper/fitface-build/run_manifest.py \
+            helper/fitface-build/v12-foundation-manifest.json \
+            --helper-root helper \
+            --check
+          python3 helper/fitface-build/run_manifest.py \
+            helper/fitface-build/v12-foundation-manifest.json \
+            --helper-root helper \
+            --target-root fitface-studio
+
+      - name: Apply Golden production stack in proven order
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 helper/fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_optical_support.py fitface-studio
+          for production in \
+            GoldenAmPmLocaleEditor.kt \
+            GoldenSemanticCompiler.kt \
+            GoldenWeatherIconCompiler.kt \
+            GoldenDateCompiler.kt \
+            GoldenWeatherTextEditor.kt \
+            GoldenD1Compiler.kt \
+            GoldenD1OpticalLock.kt \
+            GoldenHardwareBaseline.kt; do
+            cp "helper/fitface-layout-golden/$production" \
+              fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          done
+          python3 helper/fitface-layout-golden/apply_golden_layout.py fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_hardware_test_patch.py fitface-studio
+
+      - name: Lock final application identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          gradle = Path('fitface-studio/app/build.gradle.kts')
+          text = gradle.read_text()
+          old = 'applicationId = "dev.fitface.studio.lcdcomposite.v11"'
+          new = 'applicationId = "dev.fitface.studio.layoutgolden"'
+          if text.count(old) != 1:
+              raise SystemExit(f'final applicationId anchor count={text.count(old)}')
+          gradle.write_text(text.replace(old, new, 1))
+          strings = Path('fitface-studio/app/src/main/res/values/strings.xml')
+          text = strings.read_text()
+          pattern = r'(<string\s+name="app_name"\s*>)[^<]*(</string>)'
+          text, count = re.subn(pattern, r'\1FitFace Studio Layout Golden\2', text, count=1)
+          if count != 1:
+              raise SystemExit(f'app_name tag count={count}')
+          strings.write_text(text)
+          PY
+          grep -F 'applicationId = "dev.fitface.studio.layoutgolden"' fitface-studio/app/build.gradle.kts
+
+      - name: Stage Golden regression and artifact tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            Samsung00049SemanticInventoryTest.kt \
+            Samsung00049PairSequenceRemapTest.kt \
+            Samsung00049SecondsCompilerTest.kt \
+            Samsung00049AmPmCompilerTest.kt \
+            Samsung00049AmPmLocaleExtensionTest.kt \
+            Samsung00049DateCompilerTest.kt \
+            Samsung00049WeekdayCompilerTest.kt \
+            Samsung00049WeatherTextCompilerTest.kt \
+            Samsung00049TempBatteryCompilerTest.kt \
+            Samsung00049MainTimeCompilerTest.kt \
+            Samsung00049WeatherIconPlacementTest.kt \
+            Samsung00049GoldenD1CompilerTest.kt \
+            Samsung00049GoldenLayoutTest.kt \
+            Samsung00049GoldenHardwareBaselineTest.kt \
+            Samsung00049GoldenArtifactTest.kt; do
+            cp "helper/fitface-layout-golden/$test" \
+              fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          done
+          cp helper/fitface-opaque-sprite/OpaqueRgb565ResizeTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          mkdir -p fitface-studio/core/format/src/test/resources/fixtures out
+          python3 helper/fitface-layout-golden/fetch_face00049_fixture.py \
+            fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+
+      - name: Run full debug unit-test regression surface
+        working-directory: fitface-studio
+        shell: bash
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Re-run final container emission contract explicitly
+        working-directory: fitface-studio
+        shell: bash
+        run: |
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049GoldenArtifactTest
+
+      - name: Verify emitted container structure and size
+        shell: bash
+        run: |
+          set -euo pipefail
+          container=out/Golden-style0-container.bin
+          test -f "$container"
+          size=$(stat -c%s "$container")
+          test "$size" -gt 0
+          test "$size" -lt 4194304
+          echo "GOLDEN_CONTAINER_BYTES=$size"
+
+      - name: Build final weather diagnostic from Golden container
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 helper/fitface-layout-golden/build_weather_contact_sheet.py \
+            out/Golden-style0-container.bin \
+            out/Golden-weather-contact-sheet.png
+          python3 - <<'PY'
+          import struct
+          from pathlib import Path
+          p = Path('out/Golden-weather-contact-sheet.png')
+          data = p.read_bytes()
+          assert data[:8] == b'\x89PNG\r\n\x1a\n'
+          assert data[12:16] == b'IHDR'
+          width, height = struct.unpack('>II', data[16:24])
+          assert (width, height) == (432, 256), (width, height)
+          assert len(data) > 1000
+          print(f'WEATHER_PNG_BYTES={len(data)}')
+          PY
+
+      - name: Build final installable APK
+        working-directory: fitface-studio
+        shell: bash
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Verify final APK identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=fitface-studio/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$apk"
+          test "$(stat -c%s "$apk")" -gt 30000000
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n1)"
+          "$AAPT" dump badging "$apk" | tee out/Golden-layoutgolden-badging.txt
+          grep -F "package: name='dev.fitface.studio.layoutgolden'" out/Golden-layoutgolden-badging.txt
+          cp "$apk" out/FitFace-Studio-Layout-Golden.apk
+
+      - name: Produce verification report and SHA256 manifest
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd out
+          sha256sum \
+            FitFace-Studio-Layout-Golden.apk \
+            Golden-style0-container.bin \
+            Golden-weather-contact-sheet.png \
+            Golden-layoutgolden-badging.txt \
+            > SHA256SUMS.txt
+          {
+            echo 'FitFace Golden D1 Task 8 verification report'
+            echo "UPSTREAM=45a9788d3877627fd5301e9ebba36ef6192d7962"
+            echo 'APPLICATION_ID=dev.fitface.studio.layoutgolden'
+            echo 'OPTICAL_RGB888=#B5B6BD'
+            echo 'OPTICAL_RGB565=0xB5B7'
+            echo "CONTAINER_BYTES=$(stat -c%s Golden-style0-container.bin)"
+            echo 'CONTAINER_REPARSE=PASS (Samsung00049GoldenArtifactTest)'
+            echo 'CONTAINER_VALIDATE_CRC=PASS (Fit3Container.validate)'
+            echo 'STYLE0_GOLDEN=PASS'
+            echo 'STYLE1_3_BYTE_IDENTITY=PASS (Samsung00049GoldenArtifactTest)'
+            echo 'FULL_DEBUG_UNIT_REGRESSION=PASS'
+            echo 'APK_ASSEMBLE=PASS'
+            echo 'WEATHER_DIAGNOSTIC=PASS'
+            echo
+            cat SHA256SUMS.txt
+          } > Golden-Task8-verification-report.txt
+          sha256sum Golden-Task8-verification-report.txt >> SHA256SUMS.txt
+          cat Golden-Task8-verification-report.txt
+          cat SHA256SUMS.txt
+
+      - name: Upload Task 8 verification artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitFace-Golden-Task8-Verification
+          path: |
+            out/FitFace-Studio-Layout-Golden.apk
+            out/Golden-style0-container.bin
+            out/Golden-weather-contact-sheet.png
+            out/Golden-layoutgolden-badging.txt
+            out/Golden-Task8-verification-report.txt
+            out/SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 90
