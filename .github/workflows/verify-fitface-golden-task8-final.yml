@@ -1,4 +1,4 @@
-name: Verify FitFace Golden Task 8 Final Artifacts
+name: Verify FitFace Golden Task 8 HW1 Artifacts
 
 on:
   push:
@@ -88,6 +88,7 @@ jobs:
             GoldenWeatherTextEditor.kt \
             GoldenD1Compiler.kt \
             GoldenD1OpticalLock.kt \
+            GoldenD1HardwareCorrections.kt \
             GoldenHardwareBaseline.kt; do
             cp "helper/fitface-layout-golden/$production" \
               fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
@@ -112,7 +113,7 @@ jobs:
           strings = Path('fitface-studio/app/src/main/res/values/strings.xml')
           text = strings.read_text()
           pattern = r'(<string\s+name="app_name"\s*>)[^<]*(</string>)'
-          text, count = re.subn(pattern, r'\1FitFace Studio Layout Golden\2', text, count=1)
+          text, count = re.subn(pattern, r'\1FitFace Studio Layout Golden HW1\2', text, count=1)
           if count != 1:
               raise SystemExit(f'app_name tag count={count}')
           strings.write_text(text)
@@ -153,7 +154,7 @@ jobs:
         shell: bash
         run: ./gradlew --no-daemon testDebugUnitTest
 
-      - name: Re-run final container emission contract explicitly
+      - name: Re-run final hardware container emission contract explicitly
         working-directory: fitface-studio
         shell: bash
         run: |
@@ -206,7 +207,7 @@ jobs:
           AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n1)"
           "$AAPT" dump badging "$apk" | tee out/Golden-layoutgolden-badging.txt
           grep -F "package: name='dev.fitface.studio.layoutgolden'" out/Golden-layoutgolden-badging.txt
-          cp "$apk" out/FitFace-Studio-Layout-Golden.apk
+          cp "$apk" out/FitFace-Studio-Layout-Golden-HW1.apk
 
       - name: Produce verification report and SHA256 manifest
         shell: bash
@@ -214,42 +215,46 @@ jobs:
           set -euo pipefail
           cd out
           sha256sum \
-            FitFace-Studio-Layout-Golden.apk \
+            FitFace-Studio-Layout-Golden-HW1.apk \
             Golden-style0-container.bin \
             Golden-weather-contact-sheet.png \
             Golden-layoutgolden-badging.txt \
             > SHA256SUMS.txt
           {
-            echo 'FitFace Golden D1 Task 8 verification report'
+            echo 'FitFace Golden D1 Task 8 HW1 verification report'
             echo "UPSTREAM=45a9788d3877627fd5301e9ebba36ef6192d7962"
             echo 'APPLICATION_ID=dev.fitface.studio.layoutgolden'
             echo 'OPTICAL_RGB888=#B5B6BD'
             echo 'OPTICAL_RGB565=0xB5B7'
+            echo 'HW1_HOUR_TENS_RECORD=153,139'
+            echo 'HW1_HOUR_ONES_RECORD=156,44'
+            echo 'HW1_KOREAN_TEXT_BINDING=WF_WEEK/4'
+            echo 'HW1_PLATE_RGB565_SHA256=0d70da8a8047ef439ec43041a737ae02cac28610c34b43708a13d736274d0bc7'
             echo "CONTAINER_BYTES=$(stat -c%s Golden-style0-container.bin)"
             echo 'CONTAINER_REPARSE=PASS (Samsung00049GoldenArtifactTest)'
             echo 'CONTAINER_VALIDATE_CRC=PASS (Fit3Container.validate)'
-            echo 'STYLE0_GOLDEN=PASS'
+            echo 'STYLE0_GOLDEN_HW1=PASS'
             echo 'STYLE1_3_BYTE_IDENTITY=PASS (Samsung00049GoldenArtifactTest)'
             echo 'FULL_DEBUG_UNIT_REGRESSION=PASS'
             echo 'APK_ASSEMBLE=PASS'
             echo 'WEATHER_DIAGNOSTIC=PASS'
             echo
             cat SHA256SUMS.txt
-          } > Golden-Task8-verification-report.txt
-          sha256sum Golden-Task8-verification-report.txt >> SHA256SUMS.txt
-          cat Golden-Task8-verification-report.txt
+          } > Golden-Task8-HW1-verification-report.txt
+          sha256sum Golden-Task8-HW1-verification-report.txt >> SHA256SUMS.txt
+          cat Golden-Task8-HW1-verification-report.txt
           cat SHA256SUMS.txt
 
-      - name: Upload Task 8 verification artifacts
+      - name: Upload Task 8 HW1 verification artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: FitFace-Golden-Task8-Verification
+          name: FitFace-Golden-Task8-HW1-Verification
           path: |
-            out/FitFace-Studio-Layout-Golden.apk
+            out/FitFace-Studio-Layout-Golden-HW1.apk
             out/Golden-style0-container.bin
             out/Golden-weather-contact-sheet.png
             out/Golden-layoutgolden-badging.txt
-            out/Golden-Task8-verification-report.txt
+            out/Golden-Task8-HW1-verification-report.txt
             out/SHA256SUMS.txt
           if-no-files-found: error
           retention-days: 90
