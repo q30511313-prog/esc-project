@@ -171,6 +171,8 @@ jobs:
       - name: Install full Golden compiler
         shell: bash
         run: |
+          cp fitface-layout-golden/GoldenAmPmLocaleEditor.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenAmPmLocaleEditor.kt
           cp fitface-layout-golden/GoldenSemanticCompiler.kt \
             fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenSemanticCompiler.kt
 
