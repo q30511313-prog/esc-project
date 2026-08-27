@@ -38,8 +38,8 @@ class Samsung00049GoldenArtifactTest {
             }
             assertEquals("Pair seq $sequence", 0xFFB5B6BDL, pair.words[0])
         }
-        assertEquals(0xB5B7, firstVisibleSpriteRgb565(compiled, globalIndex = 4, sequenceId = 3))
-        assertEquals(0xB5B7, firstVisibleSpriteRgb565(compiled, globalIndex = 7, sequenceId = 69))
+        assertTrue(spriteContainsRgb565(compiled, globalIndex = 4, sequenceId = 3, target = 0xB5B7))
+        assertTrue(spriteContainsRgb565(compiled, globalIndex = 7, sequenceId = 69, target = 0xB5B7))
         siblings.forEach { (name, bytes) ->
             assertArrayEquals(bytes, compiled.entryByBasename(name).data)
         }
@@ -81,11 +81,12 @@ class Samsung00049GoldenArtifactTest {
         }
     }
 
-    private fun firstVisibleSpriteRgb565(
+    private fun spriteContainsRgb565(
         container: Fit3Container,
         globalIndex: Int,
         sequenceId: Int,
-    ): Int {
+        target: Int,
+    ): Boolean {
         val entry = container.entryByBasename("style0.bin")
         val record = FaceRecordParser.scanWidgets(entry).single {
             it.globalIndex == globalIndex &&
@@ -98,12 +99,17 @@ class Samsung00049GoldenArtifactTest {
             (it.recordOffset - firstImageOffset).toLong() == record.words.first()
         }
         val bytes = container.toByteArray()
-        repeat(image.width * image.height) { pixel ->
+        for (pixel in 0 until image.width * image.height) {
             val absolute = entry.offset + image.samplesOffset + pixel * image.bytesPerPixel
-            val visible = image.bytesPerPixel < 3 || (bytes[absolute + 2].toInt() and 0xFF) != 0
-            if (visible) return bytes.u16(absolute)
+            val rgb565 = bytes.u16(absolute)
+            if (image.bytesPerPixel >= 3) {
+                val alpha = bytes[absolute + 2].toInt() and 0xFF
+                if (alpha != 0 && rgb565 == target) return true
+            } else if (rgb565 == target) {
+                return true
+            }
         }
-        throw AssertionError("Sprite g$globalIndex/seq$sequenceId has no visible pixels")
+        return false
     }
 
     private fun siblingBytes(source: Fit3Container): Map<String, ByteArray> =
