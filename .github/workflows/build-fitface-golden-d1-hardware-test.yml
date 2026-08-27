@@ -52,7 +52,7 @@ jobs:
             --helper-root helper \
             --target-root fitface-studio
 
-      - name: Apply Golden D1 format, optical support, layout, and hardware-test session wiring
+      - name: Apply Golden D1 format, optical, HW1, layout, and hardware-test session wiring
         run: |
           python3 helper/fitface-layout-golden/apply_golden_format_patch.py fitface-studio
           python3 helper/fitface-layout-golden/apply_golden_optical_support.py fitface-studio
@@ -64,6 +64,7 @@ jobs:
             GoldenWeatherTextEditor.kt \
             GoldenD1Compiler.kt \
             GoldenD1OpticalLock.kt \
+            GoldenD1HardwareCorrections.kt \
             GoldenHardwareBaseline.kt; do
             cp "helper/fitface-layout-golden/$production" \
               fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
@@ -87,7 +88,7 @@ jobs:
           strings = Path('fitface-studio/app/src/main/res/values/strings.xml')
           text = strings.read_text()
           pattern = r'(<string\s+name="app_name"\s*>)[^<]*(</string>)'
-          text, count = re.subn(pattern, r'\1FitFace Studio Golden D1\2', text, count=1)
+          text, count = re.subn(pattern, r'\1FitFace Studio Golden D1 HW1\2', text, count=1)
           if count != 1:
               raise SystemExit(f'app_name tag count={count}')
           strings.write_text(text)
@@ -180,15 +181,15 @@ jobs:
           "$AAPT" dump badging "$apk" | tee golden-d1-badging.txt
           grep -F "package: name='dev.fitface.studio.lcdcomposite.golden.d1'" golden-d1-badging.txt
           mkdir -p golden-d1-output
-          cp "$apk" golden-d1-output/FitFace-Studio-Golden-D1-Hardware-Test.apk
-          sha256sum golden-d1-output/FitFace-Studio-Golden-D1-Hardware-Test.apk \
-            | tee golden-d1-output/FitFace-Studio-Golden-D1-Hardware-Test.sha256
+          cp "$apk" golden-d1-output/FitFace-Studio-Golden-D1-HW1-Hardware-Test.apk
+          sha256sum golden-d1-output/FitFace-Studio-Golden-D1-HW1-Hardware-Test.apk \
+            | tee golden-d1-output/FitFace-Studio-Golden-D1-HW1-Hardware-Test.sha256
           cp golden-d1-badging.txt golden-d1-output/
 
-      - name: Upload Golden D1 hardware-test APK
+      - name: Upload Golden D1 HW1 hardware-test APK
         uses: actions/upload-artifact@v4
         with:
-          name: FitFace-Studio-Golden-D1-Hardware-Test
+          name: FitFace-Studio-Golden-D1-HW1-Hardware-Test
           path: golden-d1-output/*
           if-no-files-found: error
           retention-days: 90
