@@ -56,7 +56,11 @@ class Samsung00049MainTimeCompilerTest {
         referenced.forEach { image ->
             assertEquals(27, image.width)
             assertEquals(67, image.height)
-            assertEquals(IMAGE_RGB565_ALPHA, image.format)
+            // Samsung 00049 ships this digit pool as opaque RGB565 (0x82), not
+            // RGB565+A. The Golden resize must preserve the shipped raster format.
+            assertEquals(IMAGE_RGB565, image.format)
+            assertEquals(0, image.reserved)
+            assertEquals(4, image.opaqueTrailerSize)
         }
         assertEquals(beforeImageCount, images.size)
 
