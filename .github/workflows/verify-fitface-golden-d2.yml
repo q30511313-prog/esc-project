@@ -57,7 +57,7 @@ jobs:
           set -euo pipefail
           python3 helper/fitface-layout-golden/apply_golden_format_patch.py fitface-studio
           python3 helper/fitface-layout-golden/apply_golden_optical_support.py fitface-studio
-          for production in GoldenAmPmLocaleEditor.kt GoldenSemanticCompiler.kt GoldenWeatherIconCompiler.kt GoldenDateCompiler.kt GoldenWeatherTextEditor.kt GoldenD1Compiler.kt GoldenD1OpticalLock.kt GoldenD1HardwareCorrections.kt GoldenHardwareBaseline.kt GoldenD2Compiler.kt GoldenD2LayoutCompiler.kt; do
+          for production in GoldenAmPmLocaleEditor.kt GoldenSemanticCompiler.kt GoldenWeatherIconCompiler.kt GoldenDateCompiler.kt GoldenWeatherTextEditor.kt GoldenD1Compiler.kt GoldenD1OpticalLock.kt GoldenD1HardwareCorrections.kt GoldenHardwareBaseline.kt GoldenD2Compiler.kt GoldenD2LayoutCompiler.kt GoldenD2HardwareBaseline.kt; do
             cp "helper/fitface-layout-golden/$production" fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
           done
           python3 helper/fitface-layout-golden/apply_golden_layout.py fitface-studio
