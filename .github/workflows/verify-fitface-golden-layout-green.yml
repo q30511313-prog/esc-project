@@ -25,7 +25,19 @@ jobs:
           git clone https://github.com/satvikgosai/fitface-studio.git fitface-studio
           git -C fitface-studio checkout 45a9788d3877627fd5301e9ebba36ef6192d7962
 
-      - name: Install proven Golden production plus Task 7 and optical lock
+      - name: Apply approved Foundation v11/v12 stack
+        shell: bash
+        run: |
+          python3 fitface-build/run_manifest.py \
+            fitface-build/v12-foundation-manifest.json \
+            --helper-root . \
+            --check
+          python3 fitface-build/run_manifest.py \
+            fitface-build/v12-foundation-manifest.json \
+            --helper-root . \
+            --target-root fitface-studio
+
+      - name: Install Golden production, Task 7, and optical lock
         shell: bash
         run: |
           python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
