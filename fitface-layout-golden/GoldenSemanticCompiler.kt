@@ -115,6 +115,81 @@ object GoldenSemanticCompiler {
         )
     }
 
+    fun compileTempBattery(
+        source: Fit3Container,
+        entryBasename: String,
+        tempX: Int,
+        tempY: Int,
+        batteryPercentX: Int,
+        batteryPercentY: Int,
+    ): ContainerEdit {
+        if (entryBasename != "style0.bin") {
+            throw Fit3FormatException(
+                "Golden temperature/battery contract is defined only for style0.bin",
+            )
+        }
+
+        val entry = source.entryByBasename(entryBasename)
+        val records = FaceRecordParser.scanWidgets(entry)
+        val temperature = records.singleOrNull {
+            it.globalIndex == 8 &&
+                it.widgetType == WIDGET_COMP &&
+                it.sequenceId == 0 &&
+                it.x == 170 &&
+                it.y == 134 &&
+                it.width == 51 &&
+                it.height == 22 &&
+                it.words.firstOrNull() == 0xFFFF003EL
+        } ?: throw Fit3FormatException(
+            "Golden temperature Composite g8/source62@(170,134) 51x22 is missing or ambiguous",
+        )
+        val battery = records.singleOrNull {
+            it.globalIndex == 11 &&
+                it.widgetType == WIDGET_COMP &&
+                it.sequenceId == 0 &&
+                it.x == 140 &&
+                it.y == 292 &&
+                it.width == 55 &&
+                it.height == 19 &&
+                it.words.firstOrNull() == 0xFFFF0025L
+        } ?: throw Fit3FormatException(
+            "Golden battery Composite g11/source37@(140,292) 55x19 is missing or ambiguous",
+        )
+        records.singleOrNull {
+            it.globalIndex == 10 &&
+                it.widgetType == WIDGET_BADGE &&
+                it.sequenceId == 37 &&
+                it.x == 34 &&
+                it.y == 301
+        } ?: throw Fit3FormatException(
+            "Golden battery Badge g10/seq37@(34,301) is missing or ambiguous",
+        )
+
+        val movedTemp = FaceEditor.moveWidget(
+            source = source,
+            entryBasename = entryBasename,
+            globalIndex = temperature.globalIndex,
+            widgetType = temperature.widgetType,
+            sequenceId = temperature.sequenceId,
+            x = tempX,
+            y = tempY,
+        )
+        val movedBattery = FaceEditor.moveWidget(
+            source = movedTemp.container,
+            entryBasename = entryBasename,
+            globalIndex = battery.globalIndex,
+            widgetType = battery.widgetType,
+            sequenceId = battery.sequenceId,
+            x = batteryPercentX,
+            y = batteryPercentY,
+        )
+        return ContainerEdit(
+            container = movedBattery.container,
+            changedPayloadBytes = movedTemp.changedPayloadBytes + movedBattery.changedPayloadBytes,
+            changedStyles = listOf(entryBasename),
+        )
+    }
+
     fun compileSeconds(
         source: Fit3Container,
         entryBasename: String,
