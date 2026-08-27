@@ -96,10 +96,6 @@ class Samsung00049GoldenLayoutTest {
         val layout = GoldenD1LayoutCompiler.compile(source).container
         val siblings = siblingBytes(layout)
         val layoutEntry = layout.entryByBasename("style0.bin")
-        val layoutRecords = FaceRecordParser.scanWidgets(layoutEntry)
-        val dateBefore = layoutRecords.single {
-            it.globalIndex == 1 && it.widgetType == WIDGET_COMP && it.sequenceId == 0
-        }.words.toList()
         val beforeImageCount = FaceRecordParser.scanImages(layoutEntry).size
         val backgroundPoints = listOf(10 to 10, 128 to 220, 230 to 390)
             .associateWith { (x, y) -> backgroundRgb565(layout, x, y) }
@@ -118,19 +114,16 @@ class Samsung00049GoldenLayoutTest {
             }
             assertEquals("Pair seq $sequence", 0xFFB5B6BDL, pair.words[0])
         }
-        listOf(8, 11).forEach { globalIndex ->
+
+        // Cross-style stock evidence proves words[13] is the colour slot for these
+        // exact 00049 Composites. g8 is the special case whose stock colour is opaque
+        // white (0xFFFFFFFF) in all four styles; Golden must still lock it optically.
+        listOf(1, 8, 11).forEach { globalIndex ->
             val composite = records.single {
                 it.globalIndex == globalIndex && it.widgetType == WIDGET_COMP
             }
             assertEquals("Composite g$globalIndex", 0xFFB5B6BDL, composite.words[13])
         }
-
-        // Native 00049 date fallback has no proven opaque +0x58 colour word. Optical
-        // lock must preserve that record rather than guessing an undocumented offset.
-        val dateAfter = records.single {
-            it.globalIndex == 1 && it.widgetType == WIDGET_COMP && it.sequenceId == 0
-        }
-        assertEquals(dateBefore, dateAfter.words.toList())
 
         assertEquals(0xB5B7, firstVisibleSpriteRgb565(output, globalIndex = 4, sequenceId = 3))
         assertEquals(0xB5B7, firstVisibleSpriteRgb565(output, globalIndex = 7, sequenceId = 69))
