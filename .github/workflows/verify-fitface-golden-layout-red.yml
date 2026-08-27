@@ -1,0 +1,64 @@
+name: Verify FitFace Golden Layout RED
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/Samsung00049GoldenLayoutTest.kt'
+      - '.github/workflows/verify-fitface-golden-layout-red.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  golden-layout-red:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout pinned upstream
+        shell: bash
+        run: |
+          git clone https://github.com/satvikgosai/fitface-studio.git fitface-studio
+          git -C fitface-studio checkout 45a9788d3877627fd5301e9ebba36ef6192d7962
+
+      - name: Install proven D1 prerequisites but not Task 7 production
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          for production in \
+            GoldenAmPmLocaleEditor.kt \
+            GoldenSemanticCompiler.kt \
+            GoldenWeatherIconCompiler.kt \
+            GoldenDateCompiler.kt \
+            GoldenWeatherTextEditor.kt \
+            GoldenD1Compiler.kt; do
+            cp "fitface-layout-golden/$production" \
+              fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          done
+          cp fitface-layout-golden/Samsung00049GoldenLayoutTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          mkdir -p fitface-studio/core/format/src/test/resources/fixtures
+          python3 fitface-layout-golden/fetch_face00049_fixture.py \
+            fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+
+      - name: RED — style-scoped background and full layout compiler are absent
+        shell: bash
+        run: |
+          set +e
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049GoldenLayoutTest \
+            > ../golden-layout-red.log 2>&1
+          status=$?
+          set -e
+          cd ..
+          cat golden-layout-red.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected Golden layout RED failure but test passed.' >&2
+            exit 1
+          fi
+          grep -F "Unresolved reference 'GoldenD1LayoutCompiler'" golden-layout-red.log
+          grep -F "Unresolved reference 'replaceBackgroundInStyle'" golden-layout-red.log
+          echo 'GOLDEN LAYOUT RED confirmed: Task 7 production is absent.'
