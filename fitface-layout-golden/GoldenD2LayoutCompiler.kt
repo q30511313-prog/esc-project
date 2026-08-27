@@ -8,7 +8,8 @@ object GoldenD2LayoutCompiler {
     const val WIDTH = 256
     const val HEIGHT = 402
 
-    fun compile(source: Fit3Container): ContainerEdit = GoldenD2Compiler.compile(source)
+    fun compile(source: Fit3Container): ContainerEdit =
+        compile(source, GoldenD2CleanPlate.argb())
 
     fun compile(
         source: Fit3Container,
