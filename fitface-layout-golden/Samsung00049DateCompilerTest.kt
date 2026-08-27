@@ -59,7 +59,9 @@ class Samsung00049DateCompilerTest {
         untouched.forEach { (name, bytes) ->
             assertArrayEquals(bytes, edited.entryByBasename(name).data)
         }
-        assertEquals(source.fileSize, edited.fileSize)
+        // Date fallback is a same-size move. The earlier AM/PM locale stage owns
+        // its intentional +28-byte growth, so the staged size is the correct baseline.
+        assertEquals(staged.fileSize, edited.fileSize)
         assertTrue(edited.validate().isValid)
     }
 
