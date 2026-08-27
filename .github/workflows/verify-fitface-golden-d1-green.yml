@@ -12,6 +12,7 @@ on:
       - 'fitface-layout-golden/GoldenDateCompiler.kt'
       - 'fitface-layout-golden/GoldenAmPmLocaleEditor.kt'
       - 'fitface-layout-golden/Samsung00049GoldenD1CompilerTest.kt'
+      - 'fitface-layout-golden/Samsung00049WeatherIconPlacementTest.kt'
       - 'fitface-layout-golden/apply_golden_format_patch.py'
       - '.github/workflows/verify-fitface-golden-d1-green.yml'
 
@@ -55,7 +56,7 @@ jobs:
             Samsung00049WeatherTextCompilerTest.kt \
             Samsung00049TempBatteryCompilerTest.kt \
             Samsung00049MainTimeCompilerTest.kt \
-            Samsung00049WeatherIconCompilerTest.kt \
+            Samsung00049WeatherIconPlacementTest.kt \
             Samsung00049GoldenD1CompilerTest.kt; do
             cp "fitface-layout-golden/$test" \
               fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
@@ -72,7 +73,7 @@ jobs:
           cd fitface-studio
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenD1CompilerTest \
-            --tests dev.fitface.studio.core.format.Samsung00049WeatherIconCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeatherIconPlacementTest \
             --tests dev.fitface.studio.core.format.Samsung00049MainTimeCompilerTest \
             --tests dev.fitface.studio.core.format.Samsung00049TempBatteryCompilerTest \
             --tests dev.fitface.studio.core.format.Samsung00049WeatherTextCompilerTest \
