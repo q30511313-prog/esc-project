@@ -1,0 +1,56 @@
+name: Verify FitFace AM PM Locale RED
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/Samsung00049AmPmLocaleExtensionTest.kt'
+      - '.github/workflows/verify-fitface-ampm-locale-red.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ampm-locale-red:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout pinned upstream
+        shell: bash
+        run: |
+          git clone https://github.com/satvikgosai/fitface-studio.git fitface-studio
+          git -C fitface-studio checkout 45a9788d3877627fd5301e9ebba36ef6192d7962
+
+      - name: Install current Golden implementation
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          cp fitface-layout-golden/GoldenSemanticCompiler.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenSemanticCompiler.kt
+          cp fitface-layout-golden/Samsung00049AmPmLocaleExtensionTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          mkdir -p fitface-studio/core/format/src/test/resources/fixtures
+          python3 fitface-layout-golden/fetch_face00049_fixture.py \
+            fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+
+      - name: RED — seq5 lacks Korean AM PM locale wiring
+        shell: bash
+        run: |
+          set +e
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmLocaleExtensionTest \
+            > ../ampm-locale-red.log 2>&1
+          status=$?
+          set -e
+          cat ../ampm-locale-red.log
+          if [ "$status" -eq 0 ]; then
+            echo 'Expected AM PM locale RED failure but test passed.' >&2
+            exit 1
+          fi
+          result='core/format/build/test-results/testDebugUnitTest/TEST-dev.fitface.studio.core.format.Samsung00049AmPmLocaleExtensionTest.xml'
+          test -f "$result"
+          grep -F 'expected:<14> but was:<12>' "$result"
+          echo 'AM_PM_LOCALE_RED_CONFIRMED=1'
