@@ -84,7 +84,7 @@ jobs:
 
           strings = Path('fitface-studio/app/src/main/res/values/strings.xml')
           text = strings.read_text()
-          old = '<string name="app_name">FitFace Studio</string>'
+          old = '<string name="app_name">FitFace Studio LCD Test</string>'
           new = '<string name="app_name">FitFace Studio Golden D1</string>'
           if text.count(old) != 1:
               raise SystemExit(f'app_name anchor count={text.count(old)}')
