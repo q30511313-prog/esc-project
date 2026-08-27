@@ -61,6 +61,7 @@ jobs:
             cp "helper/fitface-layout-golden/$production" fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
           done
           python3 helper/fitface-layout-golden/apply_golden_layout.py fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_d2_layout.py fitface-studio
       - name: Stage D2 contracts
         shell: bash
         run: |
