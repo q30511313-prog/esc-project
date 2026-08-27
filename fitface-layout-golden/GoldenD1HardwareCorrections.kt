@@ -20,7 +20,7 @@ object GoldenD1HardwareCorrections {
     const val INPUT_PLATE_RGB565_SHA256 =
         "e12a722dc7a1e51bde71c9ffa375e0ec9443521e9da9feaef77819ee8e939c3e"
     const val OUTPUT_PLATE_RGB565_SHA256 =
-        "0d70da8a8047ef439ec43041a737ae02cac28610c34b43708a13d736274d0bc7"
+        "a87cdd87997aaf716c8a13b42d91d1e2c84902fe7efed273c7160e02b81b29a6"
 
     // Perspective-normalized measurements from two independent real-watch photos.
     // g3: firmware x bias ~= -76 px. g4: x bias ~= -50 px, y bias ~= +95 px.
@@ -400,9 +400,12 @@ object GoldenD1HardwareCorrections {
             val red = color ushr 16 and 0xFF
             val green = color ushr 8 and 0xFF
             val blue = color and 0xFF
-            val rgb565 = ((red ushr 3) shl 11) or
-                ((green ushr 2) shl 5) or
-                (blue ushr 3)
+            // Must mirror FaceEditor.encodeRgb565 exactly. Using channel bit-shifts
+            // here hashes a different byte stream for interpolated HW1 plate pixels.
+            val red5 = (red * 31 + 127) / 255
+            val green6 = (green * 63 + 127) / 255
+            val blue5 = (blue * 31 + 127) / 255
+            val rgb565 = (red5 shl 11) or (green6 shl 5) or blue5
             raw[index * 2] = rgb565.toByte()
             raw[index * 2 + 1] = (rgb565 ushr 8).toByte()
         }
