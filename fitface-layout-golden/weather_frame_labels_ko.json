@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "basis": "Samsung 00049 v4.0.2 seq69 24-frame contact-sheet visual semantics. Labels are deliberately coarse display labels when the provider-specific distinction is not proven.",
+  "frames": [
+    {"index":0,"label":"맑음","class":"clear","confidence":"high"},
+    {"index":1,"label":"구름조금","class":"partly_cloudy","confidence":"high"},
+    {"index":2,"label":"흐림","class":"cloudy","confidence":"high"},
+    {"index":3,"label":"안개","class":"fog","confidence":"high"},
+    {"index":4,"label":"비","class":"rain","confidence":"medium"},
+    {"index":5,"label":"비","class":"rain","confidence":"medium"},
+    {"index":6,"label":"비","class":"rain","confidence":"medium"},
+    {"index":7,"label":"소나기","class":"sun_shower","confidence":"high"},
+    {"index":8,"label":"뇌우","class":"thunderstorm","confidence":"high"},
+    {"index":9,"label":"뇌우","class":"thunderstorm","confidence":"high"},
+    {"index":10,"label":"눈","class":"snow","confidence":"high"},
+    {"index":11,"label":"눈","class":"snow","confidence":"high"},
+    {"index":12,"label":"진눈깨비","class":"mixed_precipitation","confidence":"medium"},
+    {"index":13,"label":"눈","class":"snow","confidence":"high"},
+    {"index":14,"label":"눈","class":"snow","confidence":"high"},
+    {"index":15,"label":"진눈깨비","class":"mixed_precipitation","confidence":"high"},
+    {"index":16,"label":"눈","class":"snow","confidence":"high"},
+    {"index":17,"label":"더움","class":"hot","confidence":"high"},
+    {"index":18,"label":"추움","class":"cold","confidence":"high"},
+    {"index":19,"label":"바람","class":"wind","confidence":"high"},
+    {"index":20,"label":"뇌우","class":"thunderstorm","confidence":"high"},
+    {"index":21,"label":"비","class":"rain","confidence":"medium"},
+    {"index":22,"label":"바람","class":"wind","confidence":"high"},
+    {"index":23,"label":"회오리","class":"vortex","confidence":"high"}
+  ]
+}
