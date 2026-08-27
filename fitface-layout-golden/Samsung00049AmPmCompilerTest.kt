@@ -18,6 +18,7 @@ class Samsung00049AmPmCompilerTest {
                 it.y == 217
         }
         assertEquals(1, donor.words[1].toInt() and 0xFF)
+        assertEquals(0x0001FFFFL, donor.words[2])
 
         val untouched = listOf("style1.bin", "style2.bin", "style3.bin")
             .associateWith { source.entryByBasename(it).data.copyOf() }
@@ -52,6 +53,7 @@ class Samsung00049AmPmCompilerTest {
             donor.words[1] and 0xFFFF_FF00L,
             amPm.words[1] and 0xFFFF_FF00L,
         )
+        assertEquals(0x0001000CL, amPm.words[2])
         assertEquals(0, after.count {
             it.globalIndex == 9 && it.sequenceId == 41
         })
@@ -72,7 +74,7 @@ class Samsung00049AmPmCompilerTest {
         untouched.forEach { (name, bytes) ->
             assertArrayEquals(bytes, edit.container.entryByBasename(name).data)
         }
-        assertEquals(source.fileSize, edit.container.fileSize)
+        assertEquals(source.fileSize + 28, edit.container.fileSize)
         assertTrue(edit.container.validate().isValid)
     }
 
