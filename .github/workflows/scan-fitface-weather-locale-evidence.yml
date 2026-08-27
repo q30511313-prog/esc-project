@@ -1,0 +1,24 @@
+name: Scan FitFace Weather Locale Evidence
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/scan_stock_weather_locale_candidates.py'
+      - '.github/workflows/scan-fitface-weather-locale-evidence.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  scan-weather-locale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Scan stock seq69 faces for Korean locale evidence
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/scan_stock_weather_locale_candidates.py
