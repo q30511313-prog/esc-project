@@ -8,6 +8,50 @@ package dev.fitface.studio.core.format
  * or touch sibling styles.
  */
 object GoldenSemanticCompiler {
+    fun compileWeekday(
+        source: Fit3Container,
+        entryBasename: String,
+        x: Int,
+        y: Int,
+    ): ContainerEdit {
+        if (entryBasename != "style0.bin") {
+            throw Fit3FormatException(
+                "Golden weekday contract is defined only for style0.bin",
+            )
+        }
+
+        val entry = source.entryByBasename(entryBasename)
+        val donor = FaceRecordParser.scanWidgets(entry).singleOrNull {
+            it.widgetType == WIDGET_PAIR &&
+                it.globalIndex == 2 &&
+                it.sequenceId == 17 &&
+                it.x == 179 &&
+                it.y == 36 &&
+                it.width == 66 &&
+                it.height == 28
+        } ?: throw Fit3FormatException(
+            "Golden weekday Pair g2/seq17@(179,36) 66x28 is missing or ambiguous",
+        )
+        val bindingWord = donor.words.getOrNull(1) ?: throw Fit3FormatException(
+            "Golden weekday Pair g2 has no binding/layout word",
+        )
+        if ((bindingWord.toInt() and 0xFF) != 4) {
+            throw Fit3FormatException(
+                "Golden weekday Pair g2 must retain WF_WEEK binding 4",
+            )
+        }
+
+        return FaceEditor.moveWidget(
+            source = source,
+            entryBasename = entryBasename,
+            globalIndex = 2,
+            widgetType = WIDGET_PAIR,
+            sequenceId = 17,
+            x = x,
+            y = y,
+        )
+    }
+
     fun compileAmPm(
         source: Fit3Container,
         entryBasename: String,
