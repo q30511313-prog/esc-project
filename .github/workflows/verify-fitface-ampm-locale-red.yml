@@ -52,5 +52,5 @@ jobs:
           fi
           result='core/format/build/test-results/testDebugUnitTest/TEST-dev.fitface.studio.core.format.Samsung00049AmPmLocaleExtensionTest.xml'
           test -f "$result"
-          grep -F 'expected:<14> but was:<12>' "$result"
+          grep -F 'Golden AM/PM locale must append exactly two groups' "$result"
           echo 'AM_PM_LOCALE_RED_CONFIRMED=1'
