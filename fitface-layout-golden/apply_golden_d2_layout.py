@@ -9,23 +9,29 @@ import zlib
 
 RAW_RGB565_BYTES = 205824
 RAW_RGB565_SHA256 = "3718133cdd95f45155706222f5d402623aa62d0fe941b33d320090f26aa72b64"
-PART_NAMES = [
-    "golden_d2_clean_plate_rgb565.zlib.b64.part00",
-    "golden_d2_clean_plate_rgb565.zlib.b64.part01",
-    "golden_d2_clean_plate_rgb565.zlib.b64.part02",
-    "golden_d2_clean_plate_rgb565.zlib.b64.part03",
+PARTS = [
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part00", "ce269860f18249465db77ee78ae96f45928ba7a85a3c0a4482e93914c5aa7b1e"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part01", "b75899f814414bab34c60d55990bde4900bb8cb84440b7d9ad45df00bbc6336d"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part02", "f943ba3e86f2986ed6d6673dfb84a32aaead7f798718f3e5638ab8f5bb78ce1a"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part03", "6c6bfd62b35f07f296eb1afa3deca18c0f37134f30ed999898052b5fe1691f69"),
 ]
 
 
 def load_parts(helper_dir: Path) -> list[str]:
     parts = []
-    for name in PART_NAMES:
+    for name, expected_sha in PARTS:
         path = helper_dir / name
         if not path.is_file():
             raise SystemExit(f"Golden D2 payload part missing: {name}")
         text = path.read_text(encoding="utf-8").strip()
         if not text:
             raise SystemExit(f"Golden D2 payload part empty: {name}")
+        actual_sha = hashlib.sha256(text.encode("utf-8")).hexdigest()
+        print(f"Golden D2 part {name} chars={len(text)} sha256={actual_sha}")
+        if actual_sha != expected_sha:
+            raise SystemExit(
+                f"Golden D2 payload part SHA-256 drifted: {name}: {actual_sha} != {expected_sha}",
+            )
         parts.append(text)
     try:
         raw = zlib.decompress(base64.b64decode("".join(parts), validate=True))
