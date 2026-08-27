@@ -18,13 +18,18 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Fetch 00049 and AM PM stock face 00106
+      - name: Fetch 00049 and stock AM PM faces
         shell: bash
         run: |
           python3 fitface-layout-golden/fetch_stock_face_fixture.py 00049 /tmp/00049.bin
           python3 fitface-layout-golden/fetch_stock_face_fixture.py 00106 /tmp/00106.bin
+          python3 fitface-layout-golden/fetch_stock_face_fixture.py 00033 /tmp/00033.bin
+          python3 fitface-layout-golden/fetch_stock_face_fixture.py 00069 /tmp/00069.bin
+          python3 fitface-layout-golden/fetch_stock_face_fixture.py 00100 /tmp/00100.bin
+          python3 fitface-layout-golden/fetch_stock_face_fixture.py 00124 /tmp/00124.bin
 
-      - name: Print locale and font binding structures
+      - name: Print locale, font binding, and seq5 Pair structures
         shell: bash
         run: |
-          python3 fitface-layout-golden/inspect_stock_locale.py /tmp/00049.bin /tmp/00106.bin
+          python3 fitface-layout-golden/inspect_stock_locale.py \
+            /tmp/00049.bin /tmp/00106.bin /tmp/00033.bin /tmp/00069.bin /tmp/00100.bin /tmp/00124.bin
