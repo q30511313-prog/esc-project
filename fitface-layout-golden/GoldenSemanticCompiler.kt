@@ -190,6 +190,88 @@ object GoldenSemanticCompiler {
         )
     }
 
+    fun compileMainTime(
+        source: Fit3Container,
+        pristine: Fit3Container,
+        entryBasename: String,
+        digitWidth: Int,
+        digitHeight: Int,
+        hourTensX: Int,
+        hourOnesX: Int,
+        minuteTensX: Int,
+        minuteOnesX: Int,
+        y: Int,
+    ): ContainerEdit {
+        if (entryBasename != "style0.bin") {
+            throw Fit3FormatException(
+                "Golden main time contract is defined only for style0.bin",
+            )
+        }
+
+        val records = FaceRecordParser.scanWidgets(source.entryByBasename(entryBasename))
+        val pristineIdentities = listOf(
+            listOf(3, 2, 32, 93),
+            listOf(4, 3, 86, 93),
+            listOf(5, 10, 32, 174),
+            listOf(6, 11, 88, 174),
+        )
+        pristineIdentities.forEach { identity ->
+            val globalIndex = identity[0]
+            val sequenceId = identity[1]
+            val x = identity[2]
+            val originalY = identity[3]
+            records.singleOrNull {
+                it.widgetType == WIDGET_SPRITE &&
+                    it.globalIndex == globalIndex &&
+                    it.sequenceId == sequenceId &&
+                    it.x == x &&
+                    it.y == originalY
+            } ?: throw Fit3FormatException(
+                "Golden main time Sprite g$globalIndex/seq$sequenceId@($x,$originalY) is missing or ambiguous",
+            )
+        }
+
+        // Sequence 3 reaches all ten digit records; resizeSprite closes over every
+        // other Sprite sharing those image records (2/10/11), so the pool is rewritten
+        // exactly once while unrelated weather frames remain untouched.
+        val resized = StructuralEditor.resizeSprite(
+            source = source,
+            entryBasenames = listOf(entryBasename),
+            sequenceId = 3,
+            width = digitWidth,
+            height = digitHeight,
+            pristine = pristine,
+        )
+
+        var current = resized.container
+        var changed = resized.changedPayloadBytes
+        val targets = listOf(
+            Triple(3, 2, hourTensX),
+            Triple(4, 3, hourOnesX),
+            Triple(5, 10, minuteTensX),
+            Triple(6, 11, minuteOnesX),
+        )
+        targets.forEach { (globalIndex, sequenceId, x) ->
+            val moved = FaceEditor.moveWidget(
+                source = current,
+                entryBasename = entryBasename,
+                globalIndex = globalIndex,
+                widgetType = WIDGET_SPRITE,
+                sequenceId = sequenceId,
+                x = x,
+                y = y,
+            )
+            current = moved.container
+            changed += moved.changedPayloadBytes
+        }
+
+        return ContainerEdit(
+            container = current,
+            changedPayloadBytes = changed,
+            changedStyles = listOf(entryBasename),
+        )
+    }
+
     fun compileSeconds(
         source: Fit3Container,
         entryBasename: String,
