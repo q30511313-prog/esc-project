@@ -32,7 +32,7 @@ class Samsung00049AmPmLocaleExtensionTest {
 
         val edited = edit.container
         val afterLocale = parseLocale(edited.entryByBasename("font_ko.bin").data)
-        assertEquals(14, afterLocale.size)
+        assertEquals("Golden AM/PM locale must append exactly two groups", 14, afterLocale.size)
         beforeLocale.indices.forEach { index ->
             assertArrayEquals(beforeLocale[index], afterLocale[index])
         }
