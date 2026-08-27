@@ -21,8 +21,8 @@ class Samsung00049WeekdayCompilerTest {
             }
         assertEquals(179, before.x)
         assertEquals(36, before.y)
-        assertEquals(4, before.words.getValue(1).toInt() and 0xFF)
-        val bindingWord = before.words.getValue(1)
+        assertEquals(4, before.words[1].toInt() and 0xFF)
+        val bindingWord = before.words[1]
 
         val result = GoldenSemanticCompiler.compileWeekday(
             source = staged,
@@ -42,7 +42,7 @@ class Samsung00049WeekdayCompilerTest {
         assertEquals(80, after.y)
         assertEquals(66, after.width)
         assertEquals(28, after.height)
-        assertEquals(bindingWord, after.words.getValue(1))
+        assertEquals(bindingWord, after.words[1])
 
         // Previously proven style0 semantics remain live.
         assertEquals(1, FaceRecordParser.scanWidgets(edited.entryByBasename("style0.bin"))
