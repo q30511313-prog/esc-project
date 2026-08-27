@@ -61,13 +61,14 @@ jobs:
             cp "helper/fitface-layout-golden/$production" fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
           done
           python3 helper/fitface-layout-golden/apply_golden_layout.py fitface-studio
-      - name: Stage D2 contract
+      - name: Stage D2 contracts
         shell: bash
         run: |
           set -euo pipefail
           cp helper/fitface-layout-golden/Samsung00049GoldenD2CompilerTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          cp helper/fitface-layout-golden/Samsung00049GoldenD2LayoutTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
           mkdir -p fitface-studio/core/format/src/test/resources/fixtures
           python3 helper/fitface-layout-golden/fetch_face00049_fixture.py fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
-      - name: Run D2 contract
+      - name: Run D2 contracts
         working-directory: fitface-studio
-        run: ./gradlew --no-daemon :core:format:testDebugUnitTest --tests dev.fitface.studio.core.format.Samsung00049GoldenD2CompilerTest
+        run: ./gradlew --no-daemon :core:format:testDebugUnitTest --tests dev.fitface.studio.core.format.Samsung00049GoldenD2CompilerTest --tests dev.fitface.studio.core.format.Samsung00049GoldenD2LayoutTest
