@@ -73,6 +73,7 @@ jobs:
         run: |
           python3 - <<'PY'
           from pathlib import Path
+          import re
 
           gradle = Path('fitface-studio/app/build.gradle.kts')
           text = gradle.read_text()
@@ -84,11 +85,16 @@ jobs:
 
           strings = Path('fitface-studio/app/src/main/res/values/strings.xml')
           text = strings.read_text()
-          old = '<string name="app_name">FitFace Studio LCD Test</string>'
-          new = '<string name="app_name">FitFace Studio Golden D1</string>'
-          if text.count(old) != 1:
-              raise SystemExit(f'app_name anchor count={text.count(old)}')
-          strings.write_text(text.replace(old, new, 1))
+          pattern = r'(<string\s+name="app_name"\s*>)[^<]*(</string>)'
+          text, count = re.subn(
+              pattern,
+              r'\1FitFace Studio Golden D1\2',
+              text,
+              count=1,
+          )
+          if count != 1:
+              raise SystemExit(f'app_name tag count={count}')
+          strings.write_text(text)
           PY
 
       - name: Stage Golden real-container regression tests
