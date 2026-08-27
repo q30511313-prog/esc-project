@@ -1,0 +1,30 @@
+name: Inspect FitFace AM PM Locale
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/fetch_stock_face_fixture.py'
+      - 'fitface-layout-golden/inspect_stock_locale.py'
+      - '.github/workflows/inspect-fitface-ampm-locale.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-locale:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fetch 00049 and AM PM stock face 00106
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/fetch_stock_face_fixture.py 00049 /tmp/00049.bin
+          python3 fitface-layout-golden/fetch_stock_face_fixture.py 00106 /tmp/00106.bin
+
+      - name: Print locale and font binding structures
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/inspect_stock_locale.py /tmp/00049.bin /tmp/00106.bin
