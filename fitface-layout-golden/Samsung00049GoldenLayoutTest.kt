@@ -51,8 +51,6 @@ class Samsung00049GoldenLayoutTest {
 
         assertGoldenGeometry(records)
 
-        // Battery shell/fill artwork is handled by the clean plate contract. The stock
-        // gauge stays byte-semantic-identical and is not guessed into a new geometry.
         val gauge = records.single { it.globalIndex == 10 && it.widgetType == WIDGET_BADGE && it.sequenceId == 37 }
         assertEquals(34, gauge.x)
         assertEquals(301, gauge.y)
@@ -72,8 +70,6 @@ class Samsung00049GoldenLayoutTest {
         val siblings = siblingBytes(source)
         val beforeImageCount = FaceRecordParser.scanImages(source.entryByBasename("style0.bin")).size
 
-        // Task 7 production must carry the exact clean plate derived from the approved
-        // 1000028944.png source; hardware/test callers must not have to inject pixels.
         val edit = GoldenD1LayoutCompiler.compile(source)
         val output = edit.container
         val records = FaceRecordParser.scanWidgets(output.entryByBasename("style0.bin"))
@@ -99,7 +95,12 @@ class Samsung00049GoldenLayoutTest {
         val source = real00049()
         val layout = GoldenD1LayoutCompiler.compile(source).container
         val siblings = siblingBytes(layout)
-        val beforeImageCount = FaceRecordParser.scanImages(layout.entryByBasename("style0.bin")).size
+        val layoutEntry = layout.entryByBasename("style0.bin")
+        val layoutRecords = FaceRecordParser.scanWidgets(layoutEntry)
+        val dateBefore = layoutRecords.single {
+            it.globalIndex == 1 && it.widgetType == WIDGET_COMP && it.sequenceId == 0
+        }.words.toList()
+        val beforeImageCount = FaceRecordParser.scanImages(layoutEntry).size
         val backgroundPoints = listOf(10 to 10, 128 to 220, 230 to 390)
             .associateWith { (x, y) -> backgroundRgb565(layout, x, y) }
 
@@ -117,12 +118,19 @@ class Samsung00049GoldenLayoutTest {
             }
             assertEquals("Pair seq $sequence", 0xFFB5B6BDL, pair.words[0])
         }
-        listOf(1, 8, 11).forEach { globalIndex ->
+        listOf(8, 11).forEach { globalIndex ->
             val composite = records.single {
                 it.globalIndex == globalIndex && it.widgetType == WIDGET_COMP
             }
             assertEquals("Composite g$globalIndex", 0xFFB5B6BDL, composite.words[13])
         }
+
+        // Native 00049 date fallback has no proven opaque +0x58 colour word. Optical
+        // lock must preserve that record rather than guessing an undocumented offset.
+        val dateAfter = records.single {
+            it.globalIndex == 1 && it.widgetType == WIDGET_COMP && it.sequenceId == 0
+        }
+        assertEquals(dateBefore, dateAfter.words.toList())
 
         assertEquals(0xB5B7, firstVisibleSpriteRgb565(output, globalIndex = 4, sequenceId = 3))
         assertEquals(0xB5B7, firstVisibleSpriteRgb565(output, globalIndex = 7, sequenceId = 69))
