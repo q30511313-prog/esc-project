@@ -6,6 +6,7 @@ on:
       - work/fitface-four-style-golden
     paths:
       - 'fitface-layout-golden/GoldenDateCompiler.kt'
+      - 'fitface-layout-golden/GoldenAmPmLocaleEditor.kt'
       - 'fitface-layout-golden/Samsung00049DateCompilerTest.kt'
       - '.github/workflows/verify-fitface-date-green.yml'
 
@@ -28,6 +29,8 @@ jobs:
         shell: bash
         run: |
           python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          cp fitface-layout-golden/GoldenAmPmLocaleEditor.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenAmPmLocaleEditor.kt
           cp fitface-layout-golden/GoldenSemanticCompiler.kt \
             fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenSemanticCompiler.kt
           cp fitface-layout-golden/GoldenDateCompiler.kt \
