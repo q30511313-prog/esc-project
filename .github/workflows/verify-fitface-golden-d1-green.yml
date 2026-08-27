@@ -1,0 +1,86 @@
+name: Verify FitFace Golden D1 GREEN
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/GoldenD1Compiler.kt'
+      - 'fitface-layout-golden/GoldenSemanticCompiler.kt'
+      - 'fitface-layout-golden/GoldenWeatherIconCompiler.kt'
+      - 'fitface-layout-golden/GoldenWeatherTextEditor.kt'
+      - 'fitface-layout-golden/GoldenDateCompiler.kt'
+      - 'fitface-layout-golden/GoldenAmPmLocaleEditor.kt'
+      - 'fitface-layout-golden/Samsung00049GoldenD1CompilerTest.kt'
+      - 'fitface-layout-golden/apply_golden_format_patch.py'
+      - '.github/workflows/verify-fitface-golden-d1-green.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  golden-d1-green:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout pinned upstream
+        shell: bash
+        run: |
+          git clone https://github.com/satvikgosai/fitface-studio.git fitface-studio
+          git -C fitface-studio checkout 45a9788d3877627fd5301e9ebba36ef6192d7962
+
+      - name: Install Golden production and regression tests
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          for production in \
+            GoldenAmPmLocaleEditor.kt \
+            GoldenSemanticCompiler.kt \
+            GoldenWeatherIconCompiler.kt \
+            GoldenDateCompiler.kt \
+            GoldenWeatherTextEditor.kt \
+            GoldenD1Compiler.kt; do
+            cp "fitface-layout-golden/$production" \
+              fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          done
+          for test in \
+            Samsung00049SemanticInventoryTest.kt \
+            Samsung00049PairSequenceRemapTest.kt \
+            Samsung00049SecondsCompilerTest.kt \
+            Samsung00049AmPmCompilerTest.kt \
+            Samsung00049AmPmLocaleExtensionTest.kt \
+            Samsung00049DateCompilerTest.kt \
+            Samsung00049WeekdayCompilerTest.kt \
+            Samsung00049WeatherTextCompilerTest.kt \
+            Samsung00049TempBatteryCompilerTest.kt \
+            Samsung00049MainTimeCompilerTest.kt \
+            Samsung00049WeatherIconCompilerTest.kt \
+            Samsung00049GoldenD1CompilerTest.kt; do
+            cp "fitface-layout-golden/$test" \
+              fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          done
+          cp fitface-opaque-sprite/OpaqueRgb565ResizeTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          mkdir -p fitface-studio/core/format/src/test/resources/fixtures
+          python3 fitface-layout-golden/fetch_face00049_fixture.py \
+            fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+
+      - name: GREEN — atomic D1 and all Golden semantic regressions
+        shell: bash
+        run: |
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049GoldenD1CompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeatherIconCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049MainTimeCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049TempBatteryCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeatherTextCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeekdayCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049DateCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmLocaleExtensionTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SecondsCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
+            --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest \
+            --tests dev.fitface.studio.core.format.OpaqueRgb565ResizeTest
