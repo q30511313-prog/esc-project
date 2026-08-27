@@ -30,8 +30,6 @@ object GoldenD1OpticalLock {
             source.entryByBasename(it).data.copyOf()
         }
 
-        // Fail closed against the exact post-layout identities. This prevents the
-        // optical pass from becoming a generic face-wide recolour operation.
         requireRecord(beforeRecords, 1, WIDGET_COMP, 0, 65, 47)
         requireRecord(beforeRecords, 2, WIDGET_PAIR, 17, 107, 80)
         requireRecord(beforeRecords, 3, WIDGET_SPRITE, 2, 77, 139)
@@ -54,8 +52,6 @@ object GoldenD1OpticalLock {
             changed += edit.changedPayloadBytes
         }
 
-        // Main HH:MM shares one native Sprite digit pool, so one anchored recolour
-        // updates that pool without touching the clean plate or weather pool.
         accept(
             FaceEditor.recolorSpriteWidgetAcrossStyles(
                 source = current,
@@ -70,7 +66,6 @@ object GoldenD1OpticalLock {
             ),
         )
 
-        // Weather keeps its existing 24-frame inventory; recolour only that pool.
         accept(
             FaceEditor.recolorSpriteWidgetAcrossStyles(
                 source = current,
@@ -175,7 +170,7 @@ object GoldenD1OpticalLock {
         "Golden D1 optical identity g$globalIndex/type$type/seq$sequence@($x,$y) is missing or ambiguous",
     )
 
-    private fun backgroundSamples(entry: Fit3Entry): ByteArray {
+    private fun backgroundSamples(entry: ContainerEntry): ByteArray {
         val image = FaceRecordParser.backgroundImage(entry)
             ?: throw Fit3FormatException("style0.bin: Golden D1 optical lock requires a background")
         val byteCount = image.width * image.height * image.bytesPerPixel
