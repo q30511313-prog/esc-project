@@ -19,6 +19,56 @@ class Samsung00049GoldenD2LayoutTest {
         val output = edit.container
         val records = FaceRecordParser.scanWidgets(output.entryByBasename("style0.bin"))
 
+        assertD2Geometry(records)
+        assertEquals(beforeImageCount, FaceRecordParser.scanImages(output.entryByBasename("style0.bin")).size)
+        assertEquals(listOf("style0.bin"), edit.changedStyles.distinct())
+        siblings.forEach { (name, bytes) ->
+            assertArrayEquals(bytes, output.entryByBasename(name).data)
+        }
+        assertTrue(output.fileSize < 4 * 1024 * 1024)
+        assertTrue(output.validate().isValid)
+        assertTrue(edit.changedPayloadBytes > 0)
+    }
+
+    @Test
+    fun compilesApprovedEmbeddedD2CleanPlateWithoutCallerInjectedPixels() {
+        val source = real00049()
+        val siblings = siblingBytes(source)
+        val beforeStyle0 = source.entryByBasename("style0.bin").data.copyOf()
+        val beforeImageCount = FaceRecordParser.scanImages(source.entryByBasename("style0.bin")).size
+
+        val edit = GoldenD2LayoutCompiler.compile(source)
+        val output = edit.container
+        val records = FaceRecordParser.scanWidgets(output.entryByBasename("style0.bin"))
+
+        assertD2Geometry(records)
+        assertEquals(
+            "3718133cdd95f45155706222f5d402623aa62d0fe941b33d320090f26aa72b64",
+            GoldenD2CleanPlate.RAW_RGB565_SHA256,
+        )
+        assertEquals(205824, GoldenD2CleanPlate.RAW_RGB565_BYTES)
+        assertEquals(256 * 402, GoldenD2CleanPlate.argb().size)
+        assertTrue(!beforeStyle0.contentEquals(output.entryByBasename("style0.bin").data))
+        assertEquals(beforeImageCount, FaceRecordParser.scanImages(output.entryByBasename("style0.bin")).size)
+        siblings.forEach { (name, bytes) ->
+            assertArrayEquals(bytes, output.entryByBasename(name).data)
+        }
+        assertTrue(output.fileSize < 4 * 1024 * 1024)
+        assertTrue(output.validate().isValid)
+    }
+
+    @Test
+    fun rejectsWrongD2CleanPlateDimensionsBeforeMutation() {
+        val source = real00049()
+        try {
+            GoldenD2LayoutCompiler.compile(source, intArrayOf(0xFF000000.toInt()))
+            throw AssertionError("expected D2 clean-plate dimension rejection")
+        } catch (error: Fit3FormatException) {
+            assertTrue(error.message.orEmpty().contains("clean plate"))
+        }
+    }
+
+    private fun assertD2Geometry(records: List<WidgetRecord>) {
         assertAt(records, 1, WIDGET_COMP, 0, 69, 48)
         assertAt(records, 2, WIDGET_PAIR, 17, 102, 75)
         assertAt(records, 3, WIDGET_SPRITE, 2, 64, 126)
@@ -32,26 +82,6 @@ class Samsung00049GoldenD2LayoutTest {
         assertAt(records, 15, WIDGET_PAIR, 14, 108, 225)
         assertAt(records, 16, WIDGET_PAIR, 15, 132, 225)
         assertAt(records, 17, WIDGET_PAIR, 69, 164, 333)
-
-        assertEquals(beforeImageCount, FaceRecordParser.scanImages(output.entryByBasename("style0.bin")).size)
-        assertEquals(listOf("style0.bin"), edit.changedStyles.distinct())
-        siblings.forEach { (name, bytes) ->
-            assertArrayEquals(bytes, output.entryByBasename(name).data)
-        }
-        assertTrue(output.fileSize < 4 * 1024 * 1024)
-        assertTrue(output.validate().isValid)
-        assertTrue(edit.changedPayloadBytes > 0)
-    }
-
-    @Test
-    fun rejectsWrongD2CleanPlateDimensionsBeforeMutation() {
-        val source = real00049()
-        try {
-            GoldenD2LayoutCompiler.compile(source, intArrayOf(0xFF000000.toInt()))
-            throw AssertionError("expected D2 clean-plate dimension rejection")
-        } catch (error: Fit3FormatException) {
-            assertTrue(error.message.orEmpty().contains("clean plate"))
-        }
     }
 
     private fun assertAt(
