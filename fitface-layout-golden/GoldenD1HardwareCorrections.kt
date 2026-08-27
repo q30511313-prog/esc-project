@@ -20,7 +20,7 @@ object GoldenD1HardwareCorrections {
     const val INPUT_PLATE_RGB565_SHA256 =
         "e12a722dc7a1e51bde71c9ffa375e0ec9443521e9da9feaef77819ee8e939c3e"
     const val OUTPUT_PLATE_RGB565_SHA256 =
-        "a87cdd87997aaf716c8a13b42d91d1e2c84902fe7efed273c7160e02b81b29a6"
+        "8f4ab8d5f11f13518ff80541bde6aff747a90d46c27a226f6c77175f5ae5084b"
 
     // Perspective-normalized measurements from two independent real-watch photos.
     // g3: firmware x bias ~= -76 px. g4: x bias ~= -50 px, y bias ~= +95 px.
