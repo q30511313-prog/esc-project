@@ -6,6 +6,9 @@ on:
       - work/fitface-four-style-golden
     paths:
       - 'fitface-layout-golden/apply_golden_hardware_test_patch.py'
+      - 'fitface-layout-golden/apply_golden_layout.py'
+      - 'fitface-layout-golden/apply_golden_optical_support.py'
+      - 'fitface-layout-golden/GoldenD1OpticalLock.kt'
       - 'fitface-layout-golden/GoldenHardwareBaseline.kt'
       - '.github/workflows/verify-fitface-golden-hardware-hook.yml'
 
@@ -24,10 +27,23 @@ jobs:
           git clone https://github.com/satvikgosai/fitface-studio.git fitface-studio
           git -C fitface-studio checkout 45a9788d3877627fd5301e9ebba36ef6192d7962
 
-      - name: Install Golden production
+      - name: Apply approved Foundation v11/v12 stack
+        shell: bash
+        run: |
+          python3 fitface-build/run_manifest.py \
+            fitface-build/v12-foundation-manifest.json \
+            --helper-root . \
+            --check
+          python3 fitface-build/run_manifest.py \
+            fitface-build/v12-foundation-manifest.json \
+            --helper-root . \
+            --target-root fitface-studio
+
+      - name: Install Golden layout, optical lock, and hardware baseline
         shell: bash
         run: |
           python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          python3 fitface-layout-golden/apply_golden_optical_support.py fitface-studio
           for production in \
             GoldenAmPmLocaleEditor.kt \
             GoldenSemanticCompiler.kt \
@@ -35,10 +51,12 @@ jobs:
             GoldenDateCompiler.kt \
             GoldenWeatherTextEditor.kt \
             GoldenD1Compiler.kt \
+            GoldenD1OpticalLock.kt \
             GoldenHardwareBaseline.kt; do
             cp "fitface-layout-golden/$production" \
               fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
           done
+          python3 fitface-layout-golden/apply_golden_layout.py fitface-studio
           python3 fitface-layout-golden/apply_golden_hardware_test_patch.py fitface-studio
 
       - name: Verify exact hardware-test wiring
