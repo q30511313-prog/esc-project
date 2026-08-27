@@ -1,0 +1,86 @@
+name: Verify FitFace Golden Weather Text GREEN
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/GoldenWeatherTextEditor.kt'
+      - 'fitface-layout-golden/weather_frame_labels_ko.json'
+      - '.github/workflows/verify-fitface-weather-text-green.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  weather-text-green:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify JSON label contract
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json
+          path='fitface-layout-golden/weather_frame_labels_ko.json'
+          data=json.load(open(path,encoding='utf-8'))
+          labels=[item['label'] for item in data['frames']]
+          expected=[
+            '맑음','구름조금','흐림','안개','비','비','비','소나기',
+            '뇌우','뇌우','눈','눈','진눈깨비','눈','눈','진눈깨비',
+            '눈','더움','추움','바람','뇌우','비','바람','회오리'
+          ]
+          assert data['schemaVersion'] == 1
+          assert [item['index'] for item in data['frames']] == list(range(24))
+          assert labels == expected
+          print('WEATHER_LABEL_JSON_COUNT=24')
+          PY
+
+      - name: Checkout pinned upstream
+        shell: bash
+        run: |
+          git clone https://github.com/satvikgosai/fitface-studio.git fitface-studio
+          git -C fitface-studio checkout 45a9788d3877627fd5301e9ebba36ef6192d7962
+
+      - name: Install Golden production and regression tests
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          cp fitface-layout-golden/GoldenAmPmLocaleEditor.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/GoldenSemanticCompiler.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/GoldenDateCompiler.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/GoldenWeatherTextEditor.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          for test in \
+            Samsung00049SemanticInventoryTest.kt \
+            Samsung00049PairSequenceRemapTest.kt \
+            Samsung00049SecondsCompilerTest.kt \
+            Samsung00049AmPmCompilerTest.kt \
+            Samsung00049AmPmLocaleExtensionTest.kt \
+            Samsung00049DateCompilerTest.kt \
+            Samsung00049WeekdayCompilerTest.kt \
+            Samsung00049WeatherTextCompilerTest.kt; do
+            cp "fitface-layout-golden/$test" \
+              fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          done
+          mkdir -p fitface-studio/core/format/src/test/resources/fixtures
+          python3 fitface-layout-golden/fetch_face00049_fixture.py \
+            fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+
+      - name: GREEN — weather text and all Golden semantic regressions
+        shell: bash
+        run: |
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeatherTextCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeekdayCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049DateCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmLocaleExtensionTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SecondsCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
+            --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest
