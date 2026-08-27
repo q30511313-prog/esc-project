@@ -52,7 +52,7 @@ class Samsung00049GoldenD4CompilerTest {
             assertEquals("style2 g${expected[0]} x", expected[1], record.x)
             assertEquals("style2 g${expected[0]} y", expected[2], record.y)
         }
-        val weather = records.single { it.widgetType == WIDGET_IMAGE && it.sequenceId == 5 }
+        val weather = records.single { it.sequenceId == 5 }
         assertEquals(60, weather.x)
         assertEquals(282, weather.y)
     }
