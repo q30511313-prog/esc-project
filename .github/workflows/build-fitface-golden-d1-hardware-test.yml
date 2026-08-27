@@ -1,0 +1,190 @@
+name: Build FitFace Golden D1 Hardware Test APK
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/**'
+      - '.github/workflows/build-fitface-golden-d1-hardware-test.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-golden-d1-hardware-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out Golden helper tree
+        uses: actions/checkout@v4
+        with:
+          ref: work/fitface-four-style-golden
+          path: helper
+
+      - name: Check out pinned FitFace Studio upstream
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Verify locked approved Foundation manifest
+        run: |
+          python3 helper/fitface-build/run_manifest.py \
+            helper/fitface-build/v12-foundation-manifest.json \
+            --helper-root helper \
+            --check
+
+      - name: Apply approved v11/v12 Foundation patch stack
+        run: |
+          python3 helper/fitface-build/run_manifest.py \
+            helper/fitface-build/v12-foundation-manifest.json \
+            --helper-root helper \
+            --target-root fitface-studio
+
+      - name: Apply Golden D1 format and hardware-test session wiring
+        run: |
+          python3 helper/fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          for production in \
+            GoldenAmPmLocaleEditor.kt \
+            GoldenSemanticCompiler.kt \
+            GoldenWeatherIconCompiler.kt \
+            GoldenDateCompiler.kt \
+            GoldenWeatherTextEditor.kt \
+            GoldenD1Compiler.kt \
+            GoldenHardwareBaseline.kt; do
+            cp "helper/fitface-layout-golden/$production" \
+              fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          done
+          python3 helper/fitface-layout-golden/apply_golden_hardware_test_patch.py fitface-studio
+
+      - name: Give hardware-test app a side-by-side identity
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          gradle = Path('fitface-studio/app/build.gradle.kts')
+          text = gradle.read_text()
+          old = 'applicationId = "dev.fitface.studio.lcdcomposite.v11"'
+          new = 'applicationId = "dev.fitface.studio.lcdcomposite.golden.d1"'
+          if text.count(old) != 1:
+              raise SystemExit(f'applicationId anchor count={text.count(old)}')
+          gradle.write_text(text.replace(old, new, 1))
+
+          strings = Path('fitface-studio/app/src/main/res/values/strings.xml')
+          text = strings.read_text()
+          old = '<string name="app_name">FitFace Studio</string>'
+          new = '<string name="app_name">FitFace Studio Golden D1</string>'
+          if text.count(old) != 1:
+              raise SystemExit(f'app_name anchor count={text.count(old)}')
+          strings.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Stage Golden real-container regression tests
+        run: |
+          for test in \
+            Samsung00049SemanticInventoryTest.kt \
+            Samsung00049PairSequenceRemapTest.kt \
+            Samsung00049SecondsCompilerTest.kt \
+            Samsung00049AmPmCompilerTest.kt \
+            Samsung00049AmPmLocaleExtensionTest.kt \
+            Samsung00049DateCompilerTest.kt \
+            Samsung00049WeekdayCompilerTest.kt \
+            Samsung00049WeatherTextCompilerTest.kt \
+            Samsung00049TempBatteryCompilerTest.kt \
+            Samsung00049MainTimeCompilerTest.kt \
+            Samsung00049WeatherIconPlacementTest.kt \
+            Samsung00049GoldenD1CompilerTest.kt \
+            Samsung00049GoldenHardwareBaselineTest.kt; do
+            cp "helper/fitface-layout-golden/$test" \
+              fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          done
+          cp helper/fitface-opaque-sprite/OpaqueRgb565ResizeTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          mkdir -p fitface-studio/core/format/src/test/resources/fixtures
+          python3 helper/fitface-layout-golden/fetch_face00049_fixture.py \
+            fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+
+      - name: Run approved LCD/format focused regressions
+        working-directory: fitface-studio
+        shell: bash
+        run: |
+          mapfile -t TESTS < <(python3 - <<'PY'
+          import json
+          from pathlib import Path
+          manifest = json.loads(Path('../helper/fitface-build/v12-foundation-manifest.json').read_text())
+          for test_name in manifest['focused_tests']:
+              print(test_name)
+          PY
+          )
+          ARGS=()
+          for test_name in "${TESTS[@]}"; do
+            ARGS+=(--tests "*${test_name}*")
+          done
+          ./gradlew --no-daemon :core:format:testDebugUnitTest "${ARGS[@]}"
+
+      - name: Run Golden D1 real-container regressions
+        working-directory: fitface-studio
+        run: |
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049GoldenHardwareBaselineTest \
+            --tests dev.fitface.studio.core.format.Samsung00049GoldenD1CompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeatherIconPlacementTest \
+            --tests dev.fitface.studio.core.format.Samsung00049MainTimeCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049TempBatteryCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeatherTextCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeekdayCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049DateCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmLocaleExtensionTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SecondsCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
+            --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest \
+            --tests dev.fitface.studio.core.format.OpaqueRgb565ResizeTest
+
+      - name: Run editor regressions
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :feature:editor:testDebugUnitTest
+
+      - name: Compile data/session path
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :core:data:compileDebugKotlin
+
+      - name: Build installable debug APK
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Verify test APK identity and prepare artifact
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=fitface-studio/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$apk"
+          test "$(stat -c%s "$apk")" -gt 30000000
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n1)"
+          "$AAPT" dump badging "$apk" | tee golden-d1-badging.txt
+          grep -F "package: name='dev.fitface.studio.lcdcomposite.golden.d1'" golden-d1-badging.txt
+          mkdir -p golden-d1-output
+          cp "$apk" golden-d1-output/FitFace-Studio-Golden-D1-Hardware-Test.apk
+          sha256sum golden-d1-output/FitFace-Studio-Golden-D1-Hardware-Test.apk \
+            | tee golden-d1-output/FitFace-Studio-Golden-D1-Hardware-Test.sha256
+          cp golden-d1-badging.txt golden-d1-output/
+
+      - name: Upload Golden D1 hardware-test APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitFace-Studio-Golden-D1-Hardware-Test
+          path: golden-d1-output/*
+          if-no-files-found: error
+          retention-days: 90
