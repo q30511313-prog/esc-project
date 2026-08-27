@@ -1,0 +1,23 @@
+name: Scan FitFace Cross-Type Shared Sequences
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/scan_stock_cross_type_sequences.py'
+      - '.github/workflows/scan-fitface-cross-type-sequences.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  scan-cross-type:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan Samsung stock faces
+        shell: bash
+        run: |
+          cd fitface-layout-golden
+          python3 scan_stock_cross_type_sequences.py
