@@ -1,0 +1,59 @@
+name: Verify FitFace Golden Hardware Session Hook
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/apply_golden_hardware_test_patch.py'
+      - 'fitface-layout-golden/GoldenHardwareBaseline.kt'
+      - '.github/workflows/verify-fitface-golden-hardware-hook.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  golden-hardware-hook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout pinned upstream
+        shell: bash
+        run: |
+          git clone https://github.com/satvikgosai/fitface-studio.git fitface-studio
+          git -C fitface-studio checkout 45a9788d3877627fd5301e9ebba36ef6192d7962
+
+      - name: Install Golden production
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          for production in \
+            GoldenAmPmLocaleEditor.kt \
+            GoldenSemanticCompiler.kt \
+            GoldenWeatherIconCompiler.kt \
+            GoldenDateCompiler.kt \
+            GoldenWeatherTextEditor.kt \
+            GoldenD1Compiler.kt \
+            GoldenHardwareBaseline.kt; do
+            cp "fitface-layout-golden/$production" \
+              fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          done
+          python3 fitface-layout-golden/apply_golden_hardware_test_patch.py fitface-studio
+
+      - name: Verify exact hardware-test wiring
+        shell: bash
+        run: |
+          file=fitface-studio/core/data/src/main/kotlin/dev/fitface/studio/core/data/WatchFaceRepositoryImpl.kt
+          grep -F 'import dev.fitface.studio.core.format.GoldenHardwareBaseline' "$file"
+          grep -F 'val stock = Fit3Container.parse(apk.binary)' "$file"
+          grep -F 'val original = GoldenHardwareBaseline.resolve(apk.faceId, stock)' "$file"
+          test "$(grep -c 'GoldenHardwareBaseline.resolve(apk.faceId, stock)' "$file")" -eq 1
+
+      - name: Compile format and data modules
+        shell: bash
+        run: |
+          cd fitface-studio
+          ./gradlew --no-daemon \
+            :core:format:compileDebugKotlin \
+            :core:data:compileDebugKotlin
