@@ -9,6 +9,8 @@ on:
       - 'fitface-layout-golden/GoldenSemanticCompiler.kt'
       - 'fitface-layout-golden/Samsung00049AmPmCompilerTest.kt'
       - 'fitface-layout-golden/Samsung00049AmPmLocaleExtensionTest.kt'
+      - 'fitface-layout-golden/Samsung00049DateCompilerTest.kt'
+      - 'fitface-layout-golden/Samsung00049WeekdayCompilerTest.kt'
       - '.github/workflows/verify-fitface-ampm-locale-green.yml'
 
 permissions:
