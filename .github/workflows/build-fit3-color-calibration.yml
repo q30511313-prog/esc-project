@@ -1,0 +1,148 @@
+name: Temporary Fit3 Single-Shot Color Calibration
+
+on:
+  push:
+    branches:
+      - tmp-fit3-color-calibration
+  pull_request:
+    branches:
+      - tmp-fitface-composite
+
+permissions:
+  contents: read
+
+jobs:
+  calibration-green-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out helper
+        uses: actions/checkout@v4
+        with:
+          ref: tmp-fit3-color-calibration
+          path: helper
+
+      - name: Check out FitFace Studio upstream
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install LCD helpers and regression tests
+        run: |
+          cp helper/fitface-lcd-color/SpriteTint.kt fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/SpriteTint.kt
+          cp helper/fitface-lcd-color/LcdPalette.kt fitface-studio/core/model/src/main/kotlin/dev/fitface/studio/core/model/LcdPalette.kt
+          cp helper/fitface-lcd-color/LcdSpriteTintTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdSpriteTintTest.kt
+          cp helper/fitface-lcd-color/LcdPaletteTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/LcdPaletteTest.kt
+          cp helper/fitface-lcd-color/CompositeColorOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CompositeColorOverrideTest.kt
+          cp helper/fitface-lcd-color/StaticRasterTintTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticRasterTintTest.kt
+          cp helper/fitface-lcd-color/StaticAlphaMaskTintTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/StaticAlphaMaskTintTest.kt
+          cp helper/fitface-lcd-color/AnchoredPairColorTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/AnchoredPairColorTest.kt
+          cp helper/fitface-lcd-color/DuplicateSequencePairColorTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/DuplicateSequencePairColorTest.kt
+          cp helper/fitface-lcd-color/ClockSpriteColorGroupTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/ClockSpriteColorGroupTest.kt
+          cp helper/fitface-lcd-color/CasioClockChromeToneTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/CasioClockChromeToneTest.kt
+          cp helper/fitface-lcd-color/Samsung00003ForegroundToneTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/Samsung00003ForegroundToneTest.kt
+          cp helper/fitface-lcd-color/Samsung00003ClockOpticalCompensationTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/Samsung00003ClockOpticalCompensationTest.kt
+          cp helper/fitface-lcd-color/Samsung00003CalibrationGridTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/Samsung00003CalibrationGridTest.kt
+
+      - name: Apply sequence experiment foundation
+        run: |
+          sed -i 's/if count != 1:/if count < 1:/' helper/fitface-sequence-experiment/apply_patch.py
+          python3 helper/fitface-sequence-experiment/apply_patch.py fitface-studio
+          cp helper/fitface-sequence-experiment/SequenceOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/SequenceOverrideTest.kt
+
+      - name: Apply Pair binding experiment
+        run: |
+          python3 helper/fitface-pair-binding/apply_patch.py fitface-studio
+          cp helper/fitface-pair-binding/PairBindingOverrideTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/PairBindingOverrideTest.kt
+
+      - name: Apply Sprite and Pair LCD controls
+        run: |
+          sed -i 's/if count != 1:/if count < 1:/' helper/fitface-lcd-color/apply_patch.py
+          python3 helper/fitface-lcd-color/apply_patch.py fitface-studio
+
+      - name: Apply RGB565+A Sprite mask fix
+        run: python3 helper/fitface-lcd-color/apply_sprite_alpha_mask_fix.py fitface-studio
+
+      - name: Apply clock Sprite group color fix
+        run: python3 helper/fitface-lcd-color/apply_clock_sprite_group_color_fix.py fitface-studio
+
+      - name: Apply Composite color control
+        run: python3 helper/fitface-lcd-color/apply_composite_color_patch.py fitface-studio
+
+      - name: Apply type-1 Static image raster color control
+        run: python3 helper/fitface-lcd-color/apply_static_color_patch.py fitface-studio
+
+      - name: Apply Casio clock chrome tone unification
+        run: python3 helper/fitface-lcd-color/apply_casio_clock_chrome_tone_fix.py fitface-studio
+
+      - name: Apply Samsung 00003 full foreground tone unification
+        run: python3 helper/fitface-lcd-color/apply_samsung00003_foreground_tone_fix.py fitface-studio
+
+      - name: Apply Samsung 00003 v10 optical baseline
+        run: python3 helper/fitface-lcd-color/apply_samsung00003_clock_optical_compensation.py fitface-studio
+
+      - name: Apply temporary 16-patch hardware calibration matrix
+        run: python3 helper/fitface-lcd-color/apply_samsung00003_calibration_grid.py fitface-studio
+
+      - name: Normalize Pair color patch order
+        run: python3 helper/fitface-lcd-color/normalize_pair_color_anchor.py fitface-studio
+
+      - name: Apply hardware non-sprite color fixes
+        run: python3 helper/fitface-lcd-color/apply_hardware_color_fix.py fitface-studio
+
+      - name: Apply bright G-SHOCK LCD label
+        run: python3 helper/fitface-lcd-color/apply_bright_lcd_label.py fitface-studio
+
+      - name: Give calibration APK a unique application ID
+        run: sed -i 's/applicationId = "dev.fitface.studio"/applicationId = "dev.fitface.studio.fit3calibration"/' fitface-studio/app/build.gradle.kts
+
+      - name: GREEN - run focused calibration and format regressions
+        working-directory: fitface-studio
+        run: |
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests '*LcdSpriteTintTest*' \
+            --tests '*LcdPaletteTest*' \
+            --tests '*CompositeColorOverrideTest*' \
+            --tests '*StaticRasterTintTest*' \
+            --tests '*StaticAlphaMaskTintTest*' \
+            --tests '*AnchoredPairColorTest*' \
+            --tests '*DuplicateSequencePairColorTest*' \
+            --tests '*ClockSpriteColorGroupTest*' \
+            --tests '*CasioClockChromeToneTest*' \
+            --tests '*Samsung00003ForegroundToneTest*' \
+            --tests '*Samsung00003ClockOpticalCompensationTest*' \
+            --tests '*Samsung00003CalibrationGridTest*' \
+            --tests '*SequenceOverrideTest*' \
+            --tests '*PairBindingOverrideTest*'
+
+      - name: Regression - run editor unit tests
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :feature:editor:testDebugUnitTest
+
+      - name: Build calibration debug APK
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Verify APK exists and hash it
+        working-directory: fitface-studio
+        run: |
+          test -f app/build/outputs/apk/debug/app-debug.apk
+          sha256sum app/build/outputs/apk/debug/app-debug.apk | tee /tmp/apk.sha256
+
+      - name: Upload calibration APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: fitface-studio-fit3-single-shot-color-calibration-debug
+          path: fitface-studio/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
+          retention-days: 7
