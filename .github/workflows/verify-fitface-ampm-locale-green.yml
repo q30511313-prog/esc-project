@@ -1,0 +1,70 @@
+name: Verify FitFace AM PM Locale GREEN
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/GoldenAmPmLocaleEditor.kt'
+      - 'fitface-layout-golden/GoldenSemanticCompiler.kt'
+      - 'fitface-layout-golden/Samsung00049AmPmCompilerTest.kt'
+      - 'fitface-layout-golden/Samsung00049AmPmLocaleExtensionTest.kt'
+      - '.github/workflows/verify-fitface-ampm-locale-green.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  ampm-locale-green:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Checkout pinned upstream
+        shell: bash
+        run: |
+          git clone https://github.com/satvikgosai/fitface-studio.git fitface-studio
+          git -C fitface-studio checkout 45a9788d3877627fd5301e9ebba36ef6192d7962
+
+      - name: Install Golden implementation and fixture
+        shell: bash
+        run: |
+          python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          cp fitface-layout-golden/GoldenAmPmLocaleEditor.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenAmPmLocaleEditor.kt
+          cp fitface-layout-golden/GoldenSemanticCompiler.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenSemanticCompiler.kt
+          cp fitface-layout-golden/GoldenDateCompiler.kt \
+            fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/GoldenDateCompiler.kt
+          cp fitface-layout-golden/Samsung00049AmPmLocaleExtensionTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/Samsung00049AmPmCompilerTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/Samsung00049SecondsCompilerTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/Samsung00049DateCompilerTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/Samsung00049WeekdayCompilerTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/Samsung00049SemanticInventoryTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/Samsung00049PairSequenceRemapTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          mkdir -p fitface-studio/core/format/src/test/resources/fixtures
+          python3 fitface-layout-golden/fetch_face00049_fixture.py \
+            fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+
+      - name: GREEN — Korean AM PM locale and Golden regressions
+        shell: bash
+        run: |
+          cd fitface-studio
+          ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmLocaleExtensionTest \
+            --tests dev.fitface.studio.core.format.Samsung00049AmPmCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SecondsCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049DateCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049WeekdayCompilerTest \
+            --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
+            --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest
+          echo 'AM_PM_SEQ5_LOCALE_GROUPS=12,13'
+          echo 'AM_PM_PAIR_WORD2=0x0001000C'
