@@ -41,7 +41,7 @@ class Samsung00049GoldenD3ArtifactTest {
         val weather = FaceRecordParser.scanWidgets(style1Entry).single {
             it.globalIndex == 7 && it.widgetType == WIDGET_SPRITE && it.sequenceId == 69
         }
-        assertEquals(24, weather.words.size)
+        assertEquals(24L, style1Entry.data.u32(weather.recordOffset + 0x20) and 0x00FF_FFFFL)
         assertEquals(175, weather.x)
         assertEquals(282, weather.y)
 
