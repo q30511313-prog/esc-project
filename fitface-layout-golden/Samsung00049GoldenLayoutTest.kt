@@ -95,6 +95,52 @@ class Samsung00049GoldenLayoutTest {
     }
 
     @Test
+    fun appliesApprovedOpticalLockAfterLayoutWithoutTintingCleanPlateOrSiblingStyles() {
+        val source = real00049()
+        val layout = GoldenD1LayoutCompiler.compile(source).container
+        val siblings = siblingBytes(layout)
+        val beforeImageCount = FaceRecordParser.scanImages(layout.entryByBasename("style0.bin")).size
+        val backgroundPoints = listOf(10 to 10, 128 to 220, 230 to 390)
+            .associateWith { (x, y) -> backgroundRgb565(layout, x, y) }
+
+        val edit = GoldenD1OpticalLock.compile(layout)
+        val output = edit.container
+        val records = FaceRecordParser.scanWidgets(output.entryByBasename("style0.bin"))
+
+        assertEquals(0xB8B8AD, GoldenD1OpticalLock.LOGICAL_RGB888)
+        assertEquals(0xB5B6BD, GoldenD1OpticalLock.OPTICAL_RGB888)
+        assertEquals(0xB5B7, GoldenD1OpticalLock.OPTICAL_RGB565)
+
+        listOf(17, 5, 14, 15, 69).forEach { sequence ->
+            val pair = records.single {
+                it.widgetType == WIDGET_PAIR && it.sequenceId == sequence
+            }
+            assertEquals("Pair seq $sequence", 0xFFB5B6BDL, pair.words[0])
+        }
+        listOf(1, 8, 11).forEach { globalIndex ->
+            val composite = records.single {
+                it.globalIndex == globalIndex && it.widgetType == WIDGET_COMP
+            }
+            assertEquals("Composite g$globalIndex", 0xFFB5B6BDL, composite.words[13])
+        }
+
+        assertEquals(0xB5B7, firstVisibleSpriteRgb565(output, globalIndex = 4, sequenceId = 3))
+        assertEquals(0xB5B7, firstVisibleSpriteRgb565(output, globalIndex = 7, sequenceId = 69))
+
+        backgroundPoints.forEach { (point, before) ->
+            assertEquals("clean plate pixel $point", before, backgroundRgb565(output, point.first, point.second))
+        }
+        assertEquals(beforeImageCount, FaceRecordParser.scanImages(output.entryByBasename("style0.bin")).size)
+        assertEquals(listOf("style0.bin"), edit.changedStyles.distinct())
+        siblings.forEach { (name, bytes) ->
+            assertArrayEquals(bytes, output.entryByBasename(name).data)
+        }
+        assertTrue(output.fileSize < 4 * 1024 * 1024)
+        assertTrue(output.validate().isValid)
+        assertTrue(edit.changedPayloadBytes > 0)
+    }
+
+    @Test
     fun rejectsWrongCleanPlateDimensionsBeforeAnyMutation() {
         val source = real00049()
         try {
@@ -134,6 +180,39 @@ class Samsung00049GoldenLayoutTest {
         }
         assertEquals(x, record.x)
         assertEquals(y, record.y)
+    }
+
+    private fun firstVisibleSpriteRgb565(
+        container: Fit3Container,
+        globalIndex: Int,
+        sequenceId: Int,
+    ): Int {
+        val entry = container.entryByBasename("style0.bin")
+        val record = FaceRecordParser.scanWidgets(entry).single {
+            it.globalIndex == globalIndex &&
+                it.widgetType == WIDGET_SPRITE &&
+                it.sequenceId == sequenceId
+        }
+        val images = FaceRecordParser.scanImages(entry)
+        val firstImageOffset = images.first().recordOffset
+        val image = images.single {
+            (it.recordOffset - firstImageOffset).toLong() == record.words.first()
+        }
+        val bytes = container.toByteArray()
+        repeat(image.width * image.height) { pixel ->
+            val absolute = entry.offset + image.samplesOffset + pixel * image.bytesPerPixel
+            val visible = image.bytesPerPixel < 3 || (bytes[absolute + 2].toInt() and 0xFF) != 0
+            if (visible) return bytes.u16(absolute)
+        }
+        throw AssertionError("Sprite g$globalIndex/seq$sequenceId has no visible pixels")
+    }
+
+    private fun backgroundRgb565(container: Fit3Container, x: Int, y: Int): Int {
+        val entry = container.entryByBasename("style0.bin")
+        val background = requireNotNull(FaceRecordParser.backgroundImage(entry))
+        val absolute = entry.offset + background.samplesOffset +
+            (y * background.width + x) * background.bytesPerPixel
+        return container.toByteArray().u16(absolute)
     }
 
     private fun deterministicCleanPlate(): IntArray = IntArray(256 * 402) { index ->
