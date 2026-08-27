@@ -52,7 +52,7 @@ jobs:
             --helper-root helper \
             --target-root fitface-studio
 
-      - name: Apply Golden D1 format and hardware-test session wiring
+      - name: Apply Golden D1 format, layout, and hardware-test session wiring
         run: |
           python3 helper/fitface-layout-golden/apply_golden_format_patch.py fitface-studio
           for production in \
@@ -66,6 +66,7 @@ jobs:
             cp "helper/fitface-layout-golden/$production" \
               fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
           done
+          python3 helper/fitface-layout-golden/apply_golden_layout.py fitface-studio
           python3 helper/fitface-layout-golden/apply_golden_hardware_test_patch.py fitface-studio
 
       - name: Give hardware-test app a side-by-side identity
@@ -112,6 +113,7 @@ jobs:
             Samsung00049MainTimeCompilerTest.kt \
             Samsung00049WeatherIconPlacementTest.kt \
             Samsung00049GoldenD1CompilerTest.kt \
+            Samsung00049GoldenLayoutTest.kt \
             Samsung00049GoldenHardwareBaselineTest.kt; do
             cp "helper/fitface-layout-golden/$test" \
               fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
@@ -144,6 +146,7 @@ jobs:
         working-directory: fitface-studio
         run: |
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
+            --tests dev.fitface.studio.core.format.Samsung00049GoldenLayoutTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenHardwareBaselineTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenD1CompilerTest \
             --tests dev.fitface.studio.core.format.Samsung00049WeatherIconPlacementTest \
