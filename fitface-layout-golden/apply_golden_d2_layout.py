@@ -11,7 +11,10 @@ RAW_RGB565_BYTES = 205824
 RAW_RGB565_SHA256 = "3718133cdd95f45155706222f5d402623aa62d0fe941b33d320090f26aa72b64"
 PARTS = [
     ("golden_d2_clean_plate_rgb565.zlib.b64.part00", "ce269860f18249465db77ee78ae96f45928ba7a85a3c0a4482e93914c5aa7b1e"),
-    ("golden_d2_clean_plate_rgb565.zlib.b64.part01", "b75899f814414bab34c60d55990bde4900bb8cb84440b7d9ad45df00bbc6336d"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part01a", "16d9cf321e8dcc4f5f32e580b75a802faaaba00c7551e4c62a48f29ef065dad6"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part01b", "a498622742a44ca90c57914b4688764a45315ac14acd5b5e02c7a5f1f65da650"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part01c", "157486bd81178efaefb5e22b7f3761ac288436388df604c94fb89ac3c7964910"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part01d", "dea85a687dbda4b82b269fc7c70c275c870a14b420cb91ebf6a9525bef62e7d5"),
     ("golden_d2_clean_plate_rgb565.zlib.b64.part02", "f943ba3e86f2986ed6d6673dfb84a32aaead7f798718f3e5638ab8f5bb78ce1a"),
     ("golden_d2_clean_plate_rgb565.zlib.b64.part03", "6c6bfd62b35f07f296eb1afa3deca18c0f37134f30ed999898052b5fe1691f69"),
 ]
