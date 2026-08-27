@@ -7,6 +7,9 @@ on:
     paths:
       - 'fitface-layout-golden/GoldenHardwareBaseline.kt'
       - 'fitface-layout-golden/Samsung00049GoldenHardwareBaselineTest.kt'
+      - 'fitface-layout-golden/Samsung00049GoldenLayoutTest.kt'
+      - 'fitface-layout-golden/apply_golden_layout.py'
+      - 'fitface-layout-golden/golden_d1_clean_plate_rgb565.zlib.b64.part*'
       - '.github/workflows/verify-fitface-golden-hardware-baseline-green.yml'
 
 permissions:
@@ -39,18 +42,22 @@ jobs:
             cp "fitface-layout-golden/$production" \
               fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
           done
+          python3 fitface-layout-golden/apply_golden_layout.py fitface-studio
           cp fitface-layout-golden/Samsung00049GoldenHardwareBaselineTest.kt \
             fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
           cp fitface-layout-golden/Samsung00049GoldenD1CompilerTest.kt \
+            fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          cp fitface-layout-golden/Samsung00049GoldenLayoutTest.kt \
             fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
           mkdir -p fitface-studio/core/format/src/test/resources/fixtures
           python3 fitface-layout-golden/fetch_face00049_fixture.py \
             fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
 
-      - name: GREEN — baseline selector and atomic D1
+      - name: GREEN — full baseline selector, clean plate, and atomic D1
         shell: bash
         run: |
           cd fitface-studio
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenHardwareBaselineTest \
+            --tests dev.fitface.studio.core.format.Samsung00049GoldenLayoutTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenD1CompilerTest
