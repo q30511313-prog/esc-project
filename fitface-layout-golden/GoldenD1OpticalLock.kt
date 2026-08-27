@@ -5,13 +5,13 @@ package dev.fitface.studio.core.format
  *
  * This stage is intentionally last: it accepts an already-compiled Samsung 00049
  * style0 Golden layout, recolours only foreground renderer paths whose colour storage
- * is already proven by the Foundation stack, and proves that the clean plate plus
- * sibling styles remain byte-identical. No record or image inventory is created.
+ * has been structurally proven, and proves that the clean plate plus sibling styles
+ * remain byte-identical. No record or image inventory is created.
  *
- * The native 00049 date Composite is deliberately not recoloured here: hardware
- * evidence shows its record +0x58/words[13] is not an opaque colour field. Guessing a
- * substitute offset would violate the fail-closed contract; the stock date fallback
- * remains byte-identical until a separate proven renderer path exists.
+ * The Foundation Composite editor remains conservative about 0xFFFFFFFF. Golden adds
+ * one exact exception for Samsung 00049 temperature g8 only: cross-style stock evidence
+ * proves words[13] is the same colour slot used by date/battery and is deliberately
+ * opaque white for that one live renderer in all four styles.
  */
 object GoldenD1OpticalLock {
     const val LOGICAL_RGB888 = 0xB8B8AD
@@ -30,20 +30,19 @@ object GoldenD1OpticalLock {
         val beforeRecords = FaceRecordParser.scanWidgets(beforeStyle0)
         val beforeImageCount = FaceRecordParser.scanImages(beforeStyle0).size
         val beforeBackground = backgroundSamples(beforeStyle0)
-        val beforeDate = requireRecord(beforeRecords, 1, WIDGET_COMP, 0, 65, 47)
-        val beforeDateBytes = recordBytes(beforeStyle0, beforeDate)
         val siblingNames = listOf("style1.bin", "style2.bin", "style3.bin")
         val siblingBytes = siblingNames.associateWith {
             source.entryByBasename(it).data.copyOf()
         }
 
+        requireOpaqueComposite(beforeRecords, 1, 0, 65, 47)
         requireRecord(beforeRecords, 2, WIDGET_PAIR, 17, 107, 80)
         requireRecord(beforeRecords, 3, WIDGET_SPRITE, 2, 77, 139)
         requireRecord(beforeRecords, 4, WIDGET_SPRITE, 3, 106, 139)
         requireRecord(beforeRecords, 5, WIDGET_SPRITE, 10, 142, 139)
         requireRecord(beforeRecords, 6, WIDGET_SPRITE, 11, 171, 139)
         requireRecord(beforeRecords, 7, WIDGET_SPRITE, 69, 113, 261)
-        requireOpaqueComposite(beforeRecords, 8, 0, 171, 260)
+        requireWhiteTemperatureComposite(beforeRecords)
         requireRecord(beforeRecords, 9, WIDGET_PAIR, 5, 48, 120)
         requireOpaqueComposite(beforeRecords, 11, 0, 82, 336)
         requireRecord(beforeRecords, 15, WIDGET_PAIR, 14, 48, 257)
@@ -108,9 +107,10 @@ object GoldenD1OpticalLock {
             )
         }
 
-        // Only the two 00049 Composites whose +0x58 word is proven opaque are safe.
+        // Date and battery expose non-white opaque ARGB at words[13], so the proven
+        // Foundation Composite path remains the narrowest safe implementation.
         listOf(
-            intArrayOf(8, 0, 171, 260),
+            intArrayOf(1, 0, 65, 47),
             intArrayOf(11, 0, 82, 336),
         ).forEach { identity ->
             accept(
@@ -126,23 +126,23 @@ object GoldenD1OpticalLock {
             )
         }
 
+        // Temperature is the exact schema exception: words[13] is opaque white in
+        // every stock style. The Golden-only helper verifies source/binding/geometry
+        // before crossing the generic Foundation white/sentinel guard.
+        accept(
+            FaceEditor.recolorGolden00049TemperatureComposite(
+                source = current,
+                entryBasename = styleName,
+                colorArgb = OPTICAL_ARGB,
+            ),
+        )
+
         val afterStyle0 = current.entryByBasename(styleName)
         if (FaceRecordParser.scanImages(afterStyle0).size != beforeImageCount) {
             throw Fit3FormatException("Golden D1 optical lock changed style0 image record count")
         }
         if (!beforeBackground.contentEquals(backgroundSamples(afterStyle0))) {
             throw Fit3FormatException("Golden D1 optical lock modified the clean-plate background")
-        }
-        val afterDate = requireRecord(
-            FaceRecordParser.scanWidgets(afterStyle0),
-            1,
-            WIDGET_COMP,
-            0,
-            65,
-            47,
-        )
-        if (!beforeDateBytes.contentEquals(recordBytes(afterStyle0, afterDate))) {
-            throw Fit3FormatException("Golden D1 optical lock modified unsupported date Composite")
         }
         siblingBytes.forEach { (name, bytes) ->
             if (!bytes.contentEquals(current.entryByBasename(name).data)) {
@@ -172,6 +172,21 @@ object GoldenD1OpticalLock {
         )
     }
 
+    private fun requireWhiteTemperatureComposite(records: List<WidgetRecord>): WidgetRecord {
+        val record = requireRecord(records, 8, WIDGET_COMP, 0, 171, 260)
+        if (record.width != 51 ||
+            record.height != 22 ||
+            record.words.getOrNull(0) != 0xFFFF003EL ||
+            record.words.getOrNull(1) != 0x00080007L ||
+            record.words.getOrNull(13) != 0xFFFF_FFFFL
+        ) {
+            throw Fit3FormatException(
+                "Golden D1 temperature g8 does not match the proven white colour-slot schema",
+            )
+        }
+        return record
+    }
+
     private fun requireOpaqueComposite(
         records: List<WidgetRecord>,
         globalIndex: Int,
@@ -183,7 +198,7 @@ object GoldenD1OpticalLock {
         val word = record.words.getOrNull(13)
         if (word == null || word == 0xFFFF_FFFFL || word ushr 24 != 0xFFL) {
             throw Fit3FormatException(
-                "Golden D1 Composite g$globalIndex lacks proven opaque +0x58 colour",
+                "Golden D1 Composite g$globalIndex lacks proven non-white opaque +0x58 colour",
             )
         }
         return record
@@ -205,9 +220,6 @@ object GoldenD1OpticalLock {
     } ?: throw Fit3FormatException(
         "Golden D1 optical identity g$globalIndex/type$type/seq$sequence@($x,$y) is missing or ambiguous",
     )
-
-    private fun recordBytes(entry: ContainerEntry, record: WidgetRecord): ByteArray =
-        entry.data.copyOfRange(record.recordOffset, record.recordOffset + record.recordSize)
 
     private fun backgroundSamples(entry: ContainerEntry): ByteArray {
         val image = FaceRecordParser.backgroundImage(entry)
