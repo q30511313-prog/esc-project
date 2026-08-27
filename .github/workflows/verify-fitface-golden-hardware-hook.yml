@@ -9,6 +9,7 @@ on:
       - 'fitface-layout-golden/apply_golden_layout.py'
       - 'fitface-layout-golden/apply_golden_optical_support.py'
       - 'fitface-layout-golden/GoldenD1OpticalLock.kt'
+      - 'fitface-layout-golden/GoldenD1HardwareCorrections.kt'
       - 'fitface-layout-golden/GoldenHardwareBaseline.kt'
       - '.github/workflows/verify-fitface-golden-hardware-hook.yml'
 
@@ -39,7 +40,7 @@ jobs:
             --helper-root . \
             --target-root fitface-studio
 
-      - name: Install Golden layout, optical lock, and hardware baseline
+      - name: Install Golden layout, optical lock, HW1, and hardware baseline
         shell: bash
         run: |
           python3 fitface-layout-golden/apply_golden_format_patch.py fitface-studio
@@ -52,6 +53,7 @@ jobs:
             GoldenWeatherTextEditor.kt \
             GoldenD1Compiler.kt \
             GoldenD1OpticalLock.kt \
+            GoldenD1HardwareCorrections.kt \
             GoldenHardwareBaseline.kt; do
             cp "fitface-layout-golden/$production" \
               fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
