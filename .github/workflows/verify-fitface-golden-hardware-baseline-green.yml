@@ -74,8 +74,13 @@ jobs:
       - name: GREEN — full baseline selector, clean plate, optical lock, HW1, and atomic D1
         shell: bash
         run: |
+          set +e
           cd fitface-studio
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenHardwareBaselineTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenLayoutTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenD1CompilerTest
+          status=$?
+          echo '--- HW1 TEST XML ---'
+          find core/format/build/test-results/testDebugUnitTest -maxdepth 1 -name '*.xml' -print -exec cat {} \;
+          exit "$status"
