@@ -53,21 +53,30 @@ def main():
             'height': u16(style, cursor + 30),
             'recordSize': record_size,
             'bindingLowByte': (words[1] & 0xFF) if widget_type == 5 and len(words) > 1 else None,
+            'word13': f'0x{words[13]:08X}' if len(words) > 13 else None,
+            'opaqueArgbWordIndices': [
+                index for index, word in enumerate(words)
+                if word != 0xFFFFFFFF and (word >> 24) == 0xFF
+            ],
             'words': [f'0x{word:08X}' for word in words],
         })
         cursor += record_size
 
-    date_composite = [r for r in records if r['globalIndex'] == 1]
+    composite_candidates = [r for r in records if r['type'] == 13]
     pair_candidates = [r for r in records if r['type'] == 5]
     report = {
-        'dateCompositeGlobal1': date_composite,
+        'compositeCandidates': composite_candidates,
+        'targetComposites': [
+            r for r in composite_candidates
+            if r['globalIndex'] in {1, 8, 11}
+        ],
         'pairCandidates': pair_candidates,
         'remainingAfterSecondsAndAmPm': [
             r for r in pair_candidates
             if r['globalIndex'] not in {9, 15, 16}
         ],
     }
-    print('DATE_INVENTORY_JSON=' + json.dumps(report, ensure_ascii=False, separators=(',', ':')))
+    print('00049_COLOR_INVENTORY_JSON=' + json.dumps(report, ensure_ascii=False, separators=(',', ':')))
 
 
 if __name__ == '__main__':
