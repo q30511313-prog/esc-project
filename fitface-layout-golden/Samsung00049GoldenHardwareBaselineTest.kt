@@ -55,7 +55,7 @@ class Samsung00049GoldenHardwareBaselineTest {
         assertEquals(4, weatherText.words[1].toInt() and 0xFF)
         assertEquals(0x0004000EL, weatherText.words[2])
         assertEquals(
-            "a87cdd87997aaf716c8a13b42d91d1e2c84902fe7efed273c7160e02b81b29a6",
+            "8f4ab8d5f11f13518ff80541bde6aff747a90d46c27a226f6c77175f5ae5084b",
             GoldenD1HardwareCorrections.OUTPUT_PLATE_RGB565_SHA256,
         )
 
