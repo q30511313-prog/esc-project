@@ -6,7 +6,7 @@ single-style background rewrite rather than calling the existing all-style helpe
 then writes GoldenD1LayoutCompiler.kt which composes that rewrite with the already
 proven GoldenD1Compiler semantic transaction.
 
-The approved clean plate is stored as four text-safe zlib/base64 chunks. The patch
+The approved clean plate is stored as text-safe zlib/base64 chunks. The patch
 verifies the assembled RGB565 payload before emitting GoldenD1CleanPlate.kt; runtime
 code verifies it again before exposing ARGB pixels to the style0 background writer.
 """
@@ -22,7 +22,9 @@ RAW_RGB565_SHA256 = "e12a722dc7a1e51bde71c9ffa375e0ec9443521e9da9feaef77819ee8e9
 PART_NAMES = [
     "golden_d1_clean_plate_rgb565.zlib.b64.part00",
     "golden_d1_clean_plate_rgb565.zlib.b64.part01",
-    "golden_d1_clean_plate_rgb565.zlib.b64.part02",
+    "golden_d1_clean_plate_rgb565.zlib.b64.part02a",
+    "golden_d1_clean_plate_rgb565.zlib.b64.part02b",
+    "golden_d1_clean_plate_rgb565.zlib.b64.part02c",
     "golden_d1_clean_plate_rgb565.zlib.b64.part03",
 ]
 
