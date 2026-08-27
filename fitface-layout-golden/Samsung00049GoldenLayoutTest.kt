@@ -2,7 +2,6 @@ package dev.fitface.studio.core.format
 
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -50,19 +49,7 @@ class Samsung00049GoldenLayoutTest {
         val output = edit.container
         val records = FaceRecordParser.scanWidgets(output.entryByBasename("style0.bin"))
 
-        assertAt(records, 1, WIDGET_COMP, 0, 65, 47)
-        assertAt(records, 2, WIDGET_PAIR, 17, 107, 80)
-        assertAt(records, 3, WIDGET_SPRITE, 2, 77, 139)
-        assertAt(records, 4, WIDGET_SPRITE, 3, 106, 139)
-        assertAt(records, 5, WIDGET_SPRITE, 10, 142, 139)
-        assertAt(records, 6, WIDGET_SPRITE, 11, 171, 139)
-        assertAt(records, 7, WIDGET_SPRITE, 69, 113, 261)
-        assertAt(records, 8, WIDGET_COMP, 0, 171, 260)
-        assertAt(records, 9, WIDGET_PAIR, 5, 48, 120)
-        assertAt(records, 11, WIDGET_COMP, 0, 82, 336)
-        assertAt(records, 15, WIDGET_PAIR, 14, 48, 257)
-        assertAt(records, 16, WIDGET_PAIR, 15, 72, 257)
-        assertAt(records, 17, WIDGET_PAIR, 69, 112, 301)
+        assertGoldenGeometry(records)
 
         // Battery shell/fill artwork is handled by the clean plate contract. The stock
         // gauge stays byte-semantic-identical and is not guessed into a new geometry.
@@ -70,6 +57,34 @@ class Samsung00049GoldenLayoutTest {
         assertEquals(34, gauge.x)
         assertEquals(301, gauge.y)
 
+        assertEquals(beforeImageCount, FaceRecordParser.scanImages(output.entryByBasename("style0.bin")).size)
+        assertEquals(listOf("style0.bin"), edit.changedStyles.distinct())
+        siblings.forEach { (name, bytes) ->
+            assertArrayEquals(bytes, output.entryByBasename(name).data)
+        }
+        assertTrue(output.validate().isValid)
+        assertTrue(edit.changedPayloadBytes > 0)
+    }
+
+    @Test
+    fun compilesApprovedEmbeddedD1CleanPlateWithoutCallerInjectedPixels() {
+        val source = real00049()
+        val siblings = siblingBytes(source)
+        val beforeImageCount = FaceRecordParser.scanImages(source.entryByBasename("style0.bin")).size
+
+        // Task 7 production must carry the exact clean plate derived from the approved
+        // 1000028944.png source; hardware/test callers must not have to inject pixels.
+        val edit = GoldenD1LayoutCompiler.compile(source)
+        val output = edit.container
+        val records = FaceRecordParser.scanWidgets(output.entryByBasename("style0.bin"))
+
+        assertGoldenGeometry(records)
+        assertEquals(
+            "e12a722dc7a1e51bde71c9ffa375e0ec9443521e9da9feaef77819ee8e939c3e",
+            GoldenD1CleanPlate.RAW_RGB565_SHA256,
+        )
+        assertEquals(205824, GoldenD1CleanPlate.RAW_RGB565_BYTES)
+        assertEquals(256 * 402, GoldenD1CleanPlate.argb().size)
         assertEquals(beforeImageCount, FaceRecordParser.scanImages(output.entryByBasename("style0.bin")).size)
         assertEquals(listOf("style0.bin"), edit.changedStyles.distinct())
         siblings.forEach { (name, bytes) ->
@@ -88,6 +103,22 @@ class Samsung00049GoldenLayoutTest {
         } catch (error: Fit3FormatException) {
             assertTrue(error.message.orEmpty().contains("clean plate"))
         }
+    }
+
+    private fun assertGoldenGeometry(records: List<WidgetRecord>) {
+        assertAt(records, 1, WIDGET_COMP, 0, 65, 47)
+        assertAt(records, 2, WIDGET_PAIR, 17, 107, 80)
+        assertAt(records, 3, WIDGET_SPRITE, 2, 77, 139)
+        assertAt(records, 4, WIDGET_SPRITE, 3, 106, 139)
+        assertAt(records, 5, WIDGET_SPRITE, 10, 142, 139)
+        assertAt(records, 6, WIDGET_SPRITE, 11, 171, 139)
+        assertAt(records, 7, WIDGET_SPRITE, 69, 113, 261)
+        assertAt(records, 8, WIDGET_COMP, 0, 171, 260)
+        assertAt(records, 9, WIDGET_PAIR, 5, 48, 120)
+        assertAt(records, 11, WIDGET_COMP, 0, 82, 336)
+        assertAt(records, 15, WIDGET_PAIR, 14, 48, 257)
+        assertAt(records, 16, WIDGET_PAIR, 15, 72, 257)
+        assertAt(records, 17, WIDGET_PAIR, 69, 112, 301)
     }
 
     private fun assertAt(
