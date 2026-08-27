@@ -15,7 +15,10 @@ PARTS = [
     ("golden_d2_clean_plate_rgb565.zlib.b64.part01b", "a498622742a44ca90c57914b4688764a45315ac14acd5b5e02c7a5f1f65da650"),
     ("golden_d2_clean_plate_rgb565.zlib.b64.part01c", "157486bd81178efaefb5e22b7f3761ac288436388df604c94fb89ac3c7964910"),
     ("golden_d2_clean_plate_rgb565.zlib.b64.part01d", "dea85a687dbda4b82b269fc7c70c275c870a14b420cb91ebf6a9525bef62e7d5"),
-    ("golden_d2_clean_plate_rgb565.zlib.b64.part02", "f943ba3e86f2986ed6d6673dfb84a32aaead7f798718f3e5638ab8f5bb78ce1a"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part02a", "1b69ba2b0d324ddad034ef6767ba4a2a03fb91e487c3772f7c0679d0066dc27f"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part02b", "70d70fe1bbf30c98d66d23e8852efa53da21e0a4c196c4042224dcb04062fb40"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part02c", "089580f5e1c2eb53cffab9052927549ad9b5469ef8262e88b078aba878fb761a"),
+    ("golden_d2_clean_plate_rgb565.zlib.b64.part02d", "01c6dd925580fab88da16bc3e89a48fd621d33319b97b7a43faad60a2db28f15"),
     ("golden_d2_clean_plate_rgb565.zlib.b64.part03", "6c6bfd62b35f07f296eb1afa3deca18c0f37134f30ed999898052b5fe1691f69"),
 ]
 
