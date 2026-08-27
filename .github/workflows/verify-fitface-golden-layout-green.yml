@@ -81,6 +81,7 @@ jobs:
         shell: bash
         run: |
           cd fitface-studio
+          set +e
           ./gradlew --no-daemon :core:format:testDebugUnitTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenLayoutTest \
             --tests dev.fitface.studio.core.format.Samsung00049GoldenD1CompilerTest \
@@ -96,3 +97,13 @@ jobs:
             --tests dev.fitface.studio.core.format.Samsung00049PairSequenceRemapTest \
             --tests dev.fitface.studio.core.format.Samsung00049SemanticInventoryTest \
             --tests dev.fitface.studio.core.format.OpaqueRgb565ResizeTest
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            result='core/format/build/test-results/testDebugUnitTest/TEST-dev.fitface.studio.core.format.Samsung00049GoldenLayoutTest.xml'
+            if [ -f "$result" ]; then
+              echo '--- Samsung00049GoldenLayoutTest.xml ---'
+              cat "$result"
+            fi
+            exit "$status"
+          fi
