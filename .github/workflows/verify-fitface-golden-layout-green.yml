@@ -8,6 +8,7 @@ on:
       - 'fitface-layout-golden/apply_golden_layout.py'
       - 'fitface-layout-golden/GoldenD1OpticalLock.kt'
       - 'fitface-layout-golden/Samsung00049GoldenLayoutTest.kt'
+      - 'fitface-layout-golden/inspect_00049_date_inventory.py'
       - '.github/workflows/verify-fitface-golden-layout-green.yml'
 
 permissions:
@@ -74,8 +75,9 @@ jobs:
           cp fitface-opaque-sprite/OpaqueRgb565ResizeTest.kt \
             fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
           mkdir -p fitface-studio/core/format/src/test/resources/fixtures
-          python3 fitface-layout-golden/fetch_face00049_fixture.py \
-            fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+          fixture=fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+          python3 fitface-layout-golden/fetch_face00049_fixture.py "$fixture"
+          python3 fitface-layout-golden/inspect_00049_date_inventory.py "$fixture"
 
       - name: GREEN — full layout, optical lock, and all D1 regressions
         shell: bash
