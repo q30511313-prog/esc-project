@@ -7,10 +7,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-/** Emits the exact final Golden 00049 container while proving it can be reparsed. */
+/** Emits the exact final Golden 00049 hardware container while proving it can be reparsed. */
 class Samsung00049GoldenArtifactTest {
     @Test
-    fun emitsFinalGoldenContainerAfterLayoutAndOpticalLock() {
+    fun emitsFinalGoldenContainerAfterLayoutOpticalLockAndHardwareCorrections() {
         val outputDir = System.getenv("GOLDEN_ARTIFACT_DIR")
             ?.takeIf { it.isNotBlank() }
             ?: throw AssertionError("GOLDEN_ARTIFACT_DIR must be set by the Task 8 workflow")
@@ -38,6 +38,20 @@ class Samsung00049GoldenArtifactTest {
             }
             assertEquals("Pair seq $sequence", 0xFFB5B6BDL, pair.words[0])
         }
+        val amPm = records.single {
+            it.globalIndex == 9 && it.widgetType == WIDGET_PAIR && it.sequenceId == 5
+        }
+        val weatherText = records.single {
+            it.globalIndex == 17 && it.widgetType == WIDGET_PAIR && it.sequenceId == 69
+        }
+        assertEquals(4, amPm.words[1].toInt() and 0xFF)
+        assertEquals(0x0004000CL, amPm.words[2])
+        assertEquals(4, weatherText.words[1].toInt() and 0xFF)
+        assertEquals(0x0004000EL, weatherText.words[2])
+        assertEquals(
+            "0d70da8a8047ef439ec43041a737ae02cac28610c34b43708a13d736274d0bc7",
+            GoldenD1HardwareCorrections.OUTPUT_PLATE_RGB565_SHA256,
+        )
         assertTrue(spriteContainsRgb565(compiled, globalIndex = 4, sequenceId = 3, target = 0xB5B7))
         assertTrue(spriteContainsRgb565(compiled, globalIndex = 7, sequenceId = 69, target = 0xB5B7))
         siblings.forEach { (name, bytes) ->
@@ -59,8 +73,10 @@ class Samsung00049GoldenArtifactTest {
         listOf(
             intArrayOf(1, WIDGET_COMP, 0, 65, 47),
             intArrayOf(2, WIDGET_PAIR, 17, 107, 80),
-            intArrayOf(3, WIDGET_SPRITE, 2, 77, 139),
-            intArrayOf(4, WIDGET_SPRITE, 3, 106, 139),
+            // Record coordinates below include the real-watch sequence offsets measured
+            // from the first hardware photos. They still target the logical 77/106 row.
+            intArrayOf(3, WIDGET_SPRITE, 2, 153, 139),
+            intArrayOf(4, WIDGET_SPRITE, 3, 156, 44),
             intArrayOf(5, WIDGET_SPRITE, 10, 142, 139),
             intArrayOf(6, WIDGET_SPRITE, 11, 171, 139),
             intArrayOf(7, WIDGET_SPRITE, 69, 113, 261),
