@@ -1,0 +1,24 @@
+name: Inspect FitFace 00049 Weather Colors
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/inspect_00049_weather_colors.py'
+      - '.github/workflows/inspect-fitface-weather-colors.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  weather-colors:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch real Samsung 00049 fixture
+        shell: bash
+        run: python3 fitface-layout-golden/fetch_face00049_fixture.py /tmp/00049.bin
+      - name: Print visible frame colors
+        shell: bash
+        run: python3 fitface-layout-golden/inspect_00049_weather_colors.py /tmp/00049.bin
