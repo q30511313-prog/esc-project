@@ -7,6 +7,7 @@ on:
     paths:
       - 'fitface-layout-golden/GoldenHardwareBaseline.kt'
       - 'fitface-layout-golden/GoldenD1OpticalLock.kt'
+      - 'fitface-layout-golden/GoldenD1HardwareCorrections.kt'
       - 'fitface-layout-golden/apply_golden_optical_support.py'
       - 'fitface-layout-golden/Samsung00049GoldenHardwareBaselineTest.kt'
       - 'fitface-layout-golden/Samsung00049GoldenLayoutTest.kt'
@@ -54,6 +55,7 @@ jobs:
             GoldenWeatherTextEditor.kt \
             GoldenD1Compiler.kt \
             GoldenD1OpticalLock.kt \
+            GoldenD1HardwareCorrections.kt \
             GoldenHardwareBaseline.kt; do
             cp "fitface-layout-golden/$production" \
               fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
@@ -69,7 +71,7 @@ jobs:
           python3 fitface-layout-golden/fetch_face00049_fixture.py \
             fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
 
-      - name: GREEN — full baseline selector, clean plate, optical lock, and atomic D1
+      - name: GREEN — full baseline selector, clean plate, optical lock, HW1, and atomic D1
         shell: bash
         run: |
           cd fitface-studio
