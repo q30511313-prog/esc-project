@@ -83,12 +83,12 @@ class Samsung00049GoldenD4InventoryTest {
         assertTrue(current.validate().isValid)
     }
 
-    private fun printSeq5(stage: String, records: List<FaceWidgetRecord>) {
+    private fun printSeq5(stage: String, records: List<WidgetRecord>) {
         val candidates = records.filter { it.sequenceId == 5 }
         println("D4_SEQ5 stage=$stage count=${candidates.size} candidates=${compact(candidates)}")
     }
 
-    private fun compact(records: List<FaceWidgetRecord>): String = records.joinToString(";") {
+    private fun compact(records: List<WidgetRecord>): String = records.joinToString(";") {
         "g${it.globalIndex}/t${it.widgetType}/x${it.x}/y${it.y}"
     }.ifEmpty { "none" }
 
