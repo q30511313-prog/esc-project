@@ -1,0 +1,83 @@
+name: Inspect FitFace Golden D5 Package Assets
+
+on:
+  push:
+    branches: [work/fitface-four-style-golden]
+    paths:
+      - '.github/workflows/inspect-fitface-golden-d5-package-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-package:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out helper tree
+        uses: actions/checkout@v4
+        with:
+          ref: work/fitface-four-style-golden
+      - name: Inspect official Samsung 00049 package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import hashlib, importlib.util, io, json, pathlib, zipfile
+
+          helper_path = pathlib.Path('fitface-layout-golden/fetch_face00049_fixture.py')
+          spec = importlib.util.spec_from_file_location('face00049', helper_path)
+          mod = importlib.util.module_from_spec(spec)
+          spec.loader.exec_module(mod)
+
+          uri, expected_size, version = mod.download_metadata()
+          package = mod.request_bytes(uri, limit=mod.MAX_PACKAGE_BYTES)
+          if len(package) != expected_size:
+              raise SystemExit(f'package size mismatch: {len(package)} != {expected_size}')
+
+          out = pathlib.Path('out')
+          extracted = out / 'selected'
+          extracted.mkdir(parents=True, exist_ok=True)
+          manifest = []
+          with zipfile.ZipFile(io.BytesIO(package)) as z:
+              infos = z.infolist()
+              for info in infos:
+                  name = info.filename
+                  low = name.lower()
+                  interesting = (
+                      low.endswith(('.png','.jpg','.jpeg','.webp','.gif','.bmp','.xml','.json','.txt','.html','.htm'))
+                      or 'preview' in low or 'screen' in low or 'thumb' in low or 'icon' in low
+                      or 'style' in low or 'watch' in low or 'face' in low
+                  )
+                  manifest.append(f'{info.file_size}\t{info.compress_size}\t{name}')
+                  if interesting and info.file_size <= 8 * 1024 * 1024:
+                      data = z.read(info)
+                      safe = name.replace('..','_').replace('\\','/').lstrip('/')
+                      p = extracted / safe
+                      p.parent.mkdir(parents=True, exist_ok=True)
+                      p.write_bytes(data)
+
+          (out/'package_manifest.txt').write_text('\n'.join(manifest)+'\n', encoding='utf-8')
+          summary = {
+              'version': version,
+              'package_bytes': len(package),
+              'package_sha256': hashlib.sha256(package).hexdigest(),
+              'member_count': len(manifest),
+              'selected_count': sum(1 for p in extracted.rglob('*') if p.is_file()),
+          }
+          (out/'summary.json').write_text(json.dumps(summary, indent=2), encoding='utf-8')
+          print('D5_PACKAGE_VERSION=' + version)
+          print('D5_PACKAGE_BYTES=' + str(len(package)))
+          print('D5_PACKAGE_MEMBERS=' + str(len(manifest)))
+          print('D5_PACKAGE_SELECTED=' + str(summary['selected_count']))
+          for line in manifest:
+              low=line.lower()
+              if any(k in low for k in ('screen','preview','thumb','icon','style')) or any(ext in low for ext in ('.png','.jpg','.jpeg','.webp')):
+                  print('D5_PACKAGE_CANDIDATE ' + line)
+          PY
+      - name: Upload D5 package assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: d5-package-assets
+          path: out
+          if-no-files-found: error
