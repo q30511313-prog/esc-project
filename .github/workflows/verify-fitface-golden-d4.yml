@@ -87,7 +87,7 @@ jobs:
       - name: Run D4 compiler contract
         id: d4_contract
         working-directory: fitface-studio
-        run: ./gradlew --no-daemon :core:format:testDebugUnitTest --tests dev.fitface.studio.core.format.Samsung00049GoldenD4CompilerTest
+        run: ./gradlew --no-daemon --info --stacktrace :core:format:testDebugUnitTest --tests dev.fitface.studio.core.format.Samsung00049GoldenD4CompilerTest
       - name: Publish D4 final status
         if: always()
         env:
