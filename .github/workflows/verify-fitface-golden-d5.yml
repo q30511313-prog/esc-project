@@ -114,7 +114,6 @@ jobs:
               node = failure if failure is not None else error
               if node is not None:
                   diag = (node.get('message') or node.text or '').strip()
-              print('D5_JUNIT_XML=' + p.read_text(encoding='utf-8', errors='replace'))
           if not diag:
               diag = 'no junit failure diagnostic found'
           diag = ' '.join(diag.split())
