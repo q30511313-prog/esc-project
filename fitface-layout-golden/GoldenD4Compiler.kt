@@ -56,6 +56,9 @@ object GoldenD4Compiler {
                 ?: throw Fit3FormatException(
                     "$STYLE2: D4 widget g${target.globalIndex} missing or ambiguous",
                 )
+            if (record.x == target.x && record.y == target.y) {
+                return
+            }
             val edit = FaceEditor.moveWidget(
                 source = current,
                 entryBasename = STYLE2,
@@ -80,17 +83,19 @@ object GoldenD4Compiler {
                 "$STYLE2: D4 weather seq5 unexpectedly overlaps target g${weather.globalIndex}",
             )
         }
-        val weatherEdit = FaceEditor.moveWidget(
-            source = current,
-            entryBasename = STYLE2,
-            globalIndex = weather.globalIndex,
-            widgetType = weather.widgetType,
-            sequenceId = weather.sequenceId,
-            x = 60,
-            y = 282,
-        )
-        current = weatherEdit.container
-        changed += weatherEdit.changedPayloadBytes
+        if (weather.x != 60 || weather.y != 282) {
+            val weatherEdit = FaceEditor.moveWidget(
+                source = current,
+                entryBasename = STYLE2,
+                globalIndex = weather.globalIndex,
+                widgetType = weather.widgetType,
+                sequenceId = weather.sequenceId,
+                x = 60,
+                y = 282,
+            )
+            current = weatherEdit.container
+            changed += weatherEdit.changedPayloadBytes
+        }
 
         locked.forEach { (name, bytes) ->
             if (!bytes.contentEquals(current.entryByBasename(name).data)) {
