@@ -1,0 +1,100 @@
+name: Inspect FitFace Golden D5 Reference
+
+on:
+  push:
+    branches: [work/fitface-four-style-golden]
+    paths:
+      - '.github/workflows/inspect-fitface-golden-d5-reference.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  recover-reference:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Recover Samsung 00049 catalogue metadata and media
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import pathlib, re, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+
+          out = pathlib.Path('out')
+          media = out / 'media'
+          media.mkdir(parents=True, exist_ok=True)
+          base = 'https://vas.samsungapps.com/vas/product/getContentCategoryProductList.as'
+          params = {
+              'imgWidth':'256','imgHeight':'402','startNum':'1','endNum':'200','status':'1','cc':'KOR',
+              'extraInfo':'screenshot','callerId':'com.samsung.wearable.fit3plugin','locale':'en_US',
+              'alignOrder':'recent','contentCategoryID':'0000004252','mcc':'450','mnc':'10','csc':'NONE',
+              'deviceId':'SM-R390','sdkVer':'36','pd':'0',
+          }
+          url = base + '?' + urllib.parse.urlencode(params)
+          req = urllib.request.Request(url, headers={'User-Agent':'Mozilla/5.0'})
+          raw = urllib.request.urlopen(req, timeout=30).read()
+          (out / 'fit3_catalog.xml').write_bytes(raw)
+          root = ET.fromstring(raw)
+          matches = []
+          for app in root.findall('.//appInfo'):
+              appid = (app.findtext('appId') or '').strip()
+              if appid.endswith('_0049'):
+                  matches.append(app)
+          if len(matches) != 1:
+              raise SystemExit(f'expected exactly one 00049 appInfo, found {len(matches)}')
+          app = matches[0]
+          xml = ET.tostring(app, encoding='unicode')
+          (out / '00049_appinfo.xml').write_text(xml, encoding='utf-8')
+
+          lines = []
+          urls = []
+          for elem in app.iter():
+              text = (elem.text or '').strip()
+              if text:
+                  lines.append(f'{elem.tag}={text}')
+                  for candidate in re.split(r'[\s,;|]+', text):
+                      if candidate.startswith('https://') or candidate.startswith('http://'):
+                          urls.append((elem.tag, candidate))
+          (out / '00049_fields.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+
+          seen = set()
+          manifest = []
+          for i, (tag, u) in enumerate(urls):
+              if u in seen:
+                  continue
+              seen.add(u)
+              try:
+                  req = urllib.request.Request(u, headers={'User-Agent':'Mozilla/5.0'})
+                  with urllib.request.urlopen(req, timeout=30) as r:
+                      data = r.read(8 * 1024 * 1024 + 1)
+                      final = r.geturl()
+                      ctype = r.headers.get('Content-Type','')
+                  if len(data) > 8 * 1024 * 1024:
+                      manifest.append(f'SKIP_TOO_LARGE tag={tag} url={u}')
+                      continue
+                  suffix = pathlib.Path(urllib.parse.urlparse(final).path).suffix.lower()
+                  if suffix not in {'.jpg','.jpeg','.png','.webp','.gif'}:
+                      suffix = '.bin'
+                  p = media / f'{i:02d}_{tag}{suffix}'
+                  p.write_bytes(data)
+                  manifest.append(f'{p.name}\t{len(data)}\t{ctype}\t{u}\t{final}')
+              except Exception as e:
+                  manifest.append(f'ERROR tag={tag} url={u} error={e}')
+          (out / 'media_manifest.txt').write_text('\n'.join(manifest) + '\n', encoding='utf-8')
+
+          print('D5_REF_APP_ID=' + (app.findtext('appId') or '').strip())
+          print('D5_REF_PRODUCT=' + (app.findtext('productName') or '').strip())
+          print('D5_REF_URL_COUNT=' + str(len(seen)))
+          for line in lines:
+              if 'Img' in line or 'img' in line or 'shot' in line.lower() or 'screen' in line.lower():
+                  print('D5_REF_FIELD ' + line)
+          for line in manifest:
+              print('D5_REF_MEDIA ' + line)
+          PY
+      - name: Upload D5 reference recovery
+        uses: actions/upload-artifact@v4
+        with:
+          name: d5-reference-recovery
+          path: out
+          if-no-files-found: error
