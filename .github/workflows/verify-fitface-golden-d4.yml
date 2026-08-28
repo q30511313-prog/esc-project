@@ -91,12 +91,23 @@ jobs:
       - name: Run D4 compiler contract
         id: d4_contract
         working-directory: fitface-studio
-        run: ./gradlew --no-daemon --info --stacktrace :core:format:testDebugUnitTest --tests dev.fitface.studio.core.format.Samsung00049GoldenD4CompilerTest
+        shell: bash
+        run: |
+          set +e
+          ./gradlew --no-daemon --info --stacktrace :core:format:testDebugUnitTest --tests dev.fitface.studio.core.format.Samsung00049GoldenD4CompilerTest 2>&1 | tee /tmp/d4-contract.log
+          rc=${PIPESTATUS[0]}
+          diag="$(grep -m1 -E 'Fit3FormatException|AssertionError|ComparisonFailure' /tmp/d4-contract.log | sed 's/^[[:space:]]*//' | tr -cd '[:alnum:][:space:]_:.=-' | cut -c1-105)"
+          if [[ -z "${diag}" ]]; then
+            diag="no compact exception found"
+          fi
+          echo "diag=${diag}" >> "${GITHUB_OUTPUT}"
+          exit "${rc}"
       - name: Publish D4 final status
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           D4_OUTCOME: ${{ steps.d4_contract.outcome }}
+          D4_DIAG: ${{ steps.d4_contract.outputs.diag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -106,7 +117,10 @@ jobs:
             state=success
           elif [[ "${D4_OUTCOME}" == "cancelled" ]]; then
             state=error
+          elif [[ -n "${D4_DIAG}" ]]; then
+            description="D4 failure: ${D4_DIAG}"
           fi
+          description="${description:0:140}"
           curl --fail-with-body -sS -L -X POST \
             -H 'Accept: application/vnd.github+json' \
             -H "Authorization: Bearer ${GH_TOKEN}" \
