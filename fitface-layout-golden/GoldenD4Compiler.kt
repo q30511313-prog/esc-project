@@ -11,6 +11,9 @@ object GoldenD4Compiler {
     private const val WIDTH = 256
     private const val HEIGHT = 402
     private const val STYLE2 = "style2.bin"
+    private const val WEATHER_GLOBAL_INDEX = 9
+    private const val WEATHER_WIDGET_TYPE = 5
+    private const val WEATHER_SEQUENCE_ID = 41
 
     private data class Target(
         val globalIndex: Int,
@@ -74,15 +77,16 @@ object GoldenD4Compiler {
 
         TARGETS.forEach(::moveUniqueGlobal)
 
-        val targetGlobalIndexes = TARGETS.mapTo(mutableSetOf()) { it.globalIndex }
         val weather = FaceRecordParser.scanWidgets(current.entryByBasename(STYLE2))
-            .singleOrNull { it.sequenceId == 5 }
-            ?: throw Fit3FormatException("$STYLE2: D4 weather seq5 missing or ambiguous")
-        if (weather.globalIndex in targetGlobalIndexes) {
-            throw Fit3FormatException(
-                "$STYLE2: D4 weather seq5 unexpectedly overlaps target g${weather.globalIndex}",
+            .singleOrNull {
+                it.globalIndex == WEATHER_GLOBAL_INDEX &&
+                    it.widgetType == WEATHER_WIDGET_TYPE &&
+                    it.sequenceId == WEATHER_SEQUENCE_ID
+            }
+            ?: throw Fit3FormatException(
+                "$STYLE2: D4 weather g$WEATHER_GLOBAL_INDEX/t$WEATHER_WIDGET_TYPE/seq$WEATHER_SEQUENCE_ID " +
+                    "missing or ambiguous",
             )
-        }
         if (weather.x != 60 || weather.y != 282) {
             val weatherEdit = FaceEditor.moveWidget(
                 source = current,
