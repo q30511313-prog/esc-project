@@ -23,7 +23,8 @@ class Samsung00049GoldenD5InventoryTest {
         records.forEach {
             println(
                 "D5_STYLE3 g=${it.globalIndex} type=${it.widgetType} seq=${it.sequenceId} " +
-                    "x=${it.x} y=${it.y} words=${it.words.joinToString(",")}",
+                    "x=${it.x} y=${it.y} w=${it.width} h=${it.height} " +
+                    "words=${it.words.joinToString(",")}",
             )
         }
         val byType = records.groupingBy { it.widgetType }.eachCount().toSortedMap()
