@@ -3,7 +3,6 @@ package dev.fitface.studio.core.format
 import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -45,7 +44,7 @@ class Samsung00049GoldenD5CompilerTest {
 
         val style3 = output.entryByBasename(STYLE3)
         assertEquals(beforeImages, FaceRecordParser.scanImages(style3).size)
-        val bg = assertNotNull(FaceRecordParser.backgroundImage(style3))
+        val bg = requireNotNull(FaceRecordParser.backgroundImage(style3))
         assertEquals(256, bg.width)
         assertEquals(402, bg.height)
 
