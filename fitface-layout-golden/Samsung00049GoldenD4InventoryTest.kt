@@ -36,19 +36,22 @@ class Samsung00049GoldenD4InventoryTest {
             )
         }
         printSeq5("initial", records)
+        val g9 = records.singleOrNull { it.globalIndex == 9 }
+        println("D4_G9_DIAG initial=${compactOne(g9)}")
         val bg = FaceRecordParser.backgroundImage(entry)
         println("D4_STYLE2_BG=${bg?.width}x${bg?.height}")
         assertTrue(d3.validate().isValid)
     }
 
     @Test
-    fun tracesSeq5AcrossApprovedD4TargetMoves() {
+    fun tracesSeq5AndG9AcrossApprovedD4TargetMoves() {
         val pristine = real00049()
         var current = GoldenD3Compiler.compile(pristine).container
-        val initial = FaceRecordParser.scanWidgets(current.entryByBasename("style2.bin"))
-            .filter { it.sequenceId == 5 }
+        val initialRecords = FaceRecordParser.scanWidgets(current.entryByBasename("style2.bin"))
+        val initialSeq5 = initialRecords.filter { it.sequenceId == 5 }
+        val initialG9 = initialRecords.singleOrNull { it.globalIndex == 9 }
         var firstCountChange = "none"
-        printSeq5("initial", FaceRecordParser.scanWidgets(current.entryByBasename("style2.bin")))
+        printSeq5("initial", initialRecords)
 
         targets.forEach { target ->
             val records = FaceRecordParser.scanWidgets(current.entryByBasename("style2.bin"))
@@ -66,19 +69,21 @@ class Samsung00049GoldenD4InventoryTest {
             }
             val after = FaceRecordParser.scanWidgets(current.entryByBasename("style2.bin"))
             val seq5 = after.filter { it.sequenceId == 5 }
-            if (firstCountChange == "none" && seq5.size != initial.size) {
+            if (firstCountChange == "none" && seq5.size != initialSeq5.size) {
                 firstCountChange = "g${target.globalIndex}"
             }
             printSeq5("after_g${target.globalIndex}", after)
         }
 
-        val finalSeq5 = FaceRecordParser.scanWidgets(current.entryByBasename("style2.bin"))
-            .filter { it.sequenceId == 5 }
-        val initialIds = compact(initial)
-        val finalIds = compact(finalSeq5)
+        val finalRecords = FaceRecordParser.scanWidgets(current.entryByBasename("style2.bin"))
+        val finalSeq5 = finalRecords.filter { it.sequenceId == 5 }
+        val finalG9 = finalRecords.singleOrNull { it.globalIndex == 9 }
         println(
-            "D4_SEQ5_DIAG initial=${initial.size}:$initialIds final=${finalSeq5.size}:$finalIds " +
-                "firstCountChange=$firstCountChange",
+            "D4_SEQ5_DIAG initial=${initialSeq5.size}:${compact(initialSeq5)} " +
+                "final=${finalSeq5.size}:${compact(finalSeq5)} firstCountChange=$firstCountChange",
+        )
+        println(
+            "D4_G9_DIAG initial=${compactOne(initialG9)} final=${compactOne(finalG9)}",
         )
         assertTrue(current.validate().isValid)
     }
@@ -89,8 +94,12 @@ class Samsung00049GoldenD4InventoryTest {
     }
 
     private fun compact(records: List<WidgetRecord>): String = records.joinToString(";") {
-        "g${it.globalIndex}/t${it.widgetType}/x${it.x}/y${it.y}"
+        compactOne(it)
     }.ifEmpty { "none" }
+
+    private fun compactOne(record: WidgetRecord?): String = record?.let {
+        "g${it.globalIndex}/t${it.widgetType}/seq${it.sequenceId}/x${it.x}/y${it.y}"
+    } ?: "none"
 
     private fun real00049(): Fit3Container {
         val stream = requireNotNull(
