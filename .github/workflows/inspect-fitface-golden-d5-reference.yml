@@ -19,7 +19,7 @@ jobs:
         run: |
           set -euo pipefail
           python3 - <<'PY'
-          import pathlib, re, urllib.parse, urllib.request, xml.etree.ElementTree as ET
+          import pathlib, re, urllib.parse, urllib.request, urllib.error, xml.etree.ElementTree as ET
 
           out = pathlib.Path('out')
           media = out / 'media'
@@ -36,61 +36,83 @@ jobs:
           raw = urllib.request.urlopen(req, timeout=30).read()
           (out / 'fit3_catalog.xml').write_bytes(raw)
           root = ET.fromstring(raw)
-          matches = []
-          for app in root.findall('.//appInfo'):
-              appid = (app.findtext('appId') or '').strip()
-              if appid.endswith('_0049'):
-                  matches.append(app)
+          matches = [app for app in root.findall('.//appInfo') if (app.findtext('appId') or '').strip().endswith('_0049')]
           if len(matches) != 1:
               raise SystemExit(f'expected exactly one 00049 appInfo, found {len(matches)}')
           app = matches[0]
-          xml = ET.tostring(app, encoding='unicode')
-          (out / '00049_appinfo.xml').write_text(xml, encoding='utf-8')
+          (out / '00049_appinfo.xml').write_text(ET.tostring(app, encoding='unicode'), encoding='utf-8')
 
           lines = []
-          urls = []
           for elem in app.iter():
               text = (elem.text or '').strip()
               if text:
                   lines.append(f'{elem.tag}={text}')
-                  for candidate in re.split(r'[\s,;|]+', text):
-                      if candidate.startswith('https://') or candidate.startswith('http://'):
-                          urls.append((elem.tag, candidate))
           (out / '00049_fields.txt').write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
-          seen = set()
+          base_shot = (app.findtext('screenShotImgURL') or '').strip()
+          count = int((app.findtext('screenShotCount') or '0').strip() or '0')
+          indexes = [int(x) for x in re.findall(r'\d+', (app.findtext('screenShotIndex') or ''))]
+          if not indexes and count:
+              indexes = list(range(1, count + 1))
+          parsed = urllib.parse.urlparse(base_shot)
+          path = pathlib.PurePosixPath(parsed.path)
+          stem, suffix = path.stem, path.suffix or '.png'
+          parent = str(path.parent)
+
+          candidates = []
+          def add(label, u):
+              if u and all(existing != u for _, existing in candidates):
+                  candidates.append((label, u))
+          add('catalog-base', base_shot)
+          for i in indexes:
+              names = [
+                  f'{stem}_{i}{suffix}', f'{stem}_{i:02d}{suffix}', f'{stem}_{i:03d}{suffix}',
+                  f'{stem}{i}{suffix}', f'{stem}({i}){suffix}', f'{stem}-{i}{suffix}',
+                  f'{i}_{stem}{suffix}', f'{i:02d}_{stem}{suffix}',
+              ]
+              for n in names:
+                  add(f'index-{i}:{n}', urllib.parse.urlunparse(parsed._replace(path=f'{parent}/{n}')))
+              add(f'index-{i}:dir', urllib.parse.urlunparse(parsed._replace(path=f'{parent}/{i}/{path.name}')))
+              add(f'index-{i}:query-index', base_shot + ('&' if '?' in base_shot else '?') + f'index={i}')
+              add(f'index-{i}:query-screenShotIndex', base_shot + ('&' if '?' in base_shot else '?') + f'screenShotIndex={i}')
+
           manifest = []
-          for i, (tag, u) in enumerate(urls):
-              if u in seen:
-                  continue
-              seen.add(u)
+          successes = 0
+          for n, (label, u) in enumerate(candidates):
               try:
                   req = urllib.request.Request(u, headers={'User-Agent':'Mozilla/5.0'})
-                  with urllib.request.urlopen(req, timeout=30) as r:
+                  with urllib.request.urlopen(req, timeout=15) as r:
                       data = r.read(8 * 1024 * 1024 + 1)
                       final = r.geturl()
                       ctype = r.headers.get('Content-Type','')
                   if len(data) > 8 * 1024 * 1024:
-                      manifest.append(f'SKIP_TOO_LARGE tag={tag} url={u}')
+                      manifest.append(f'TOO_LARGE\t{label}\t{u}')
                       continue
-                  suffix = pathlib.Path(urllib.parse.urlparse(final).path).suffix.lower()
-                  if suffix not in {'.jpg','.jpeg','.png','.webp','.gif'}:
-                      suffix = '.bin'
-                  p = media / f'{i:02d}_{tag}{suffix}'
+                  if not ctype.lower().startswith('image/'):
+                      manifest.append(f'NON_IMAGE\t{len(data)}\t{ctype}\t{label}\t{u}\t{final}')
+                      continue
+                  ext = pathlib.Path(urllib.parse.urlparse(final).path).suffix.lower()
+                  if ext not in {'.jpg','.jpeg','.png','.webp','.gif'}:
+                      ext = '.bin'
+                  p = media / f'{successes:02d}_{label.replace("/", "_").replace(":", "_")}{ext}'
                   p.write_bytes(data)
-                  manifest.append(f'{p.name}\t{len(data)}\t{ctype}\t{u}\t{final}')
+                  manifest.append(f'OK\t{p.name}\t{len(data)}\t{ctype}\t{label}\t{u}\t{final}')
+                  successes += 1
+              except urllib.error.HTTPError as e:
+                  manifest.append(f'HTTP_{e.code}\t{label}\t{u}')
               except Exception as e:
-                  manifest.append(f'ERROR tag={tag} url={u} error={e}')
+                  manifest.append(f'ERROR\t{label}\t{u}\t{type(e).__name__}:{e}')
           (out / 'media_manifest.txt').write_text('\n'.join(manifest) + '\n', encoding='utf-8')
 
           print('D5_REF_APP_ID=' + (app.findtext('appId') or '').strip())
           print('D5_REF_PRODUCT=' + (app.findtext('productName') or '').strip())
-          print('D5_REF_URL_COUNT=' + str(len(seen)))
-          for line in lines:
-              if 'Img' in line or 'img' in line or 'shot' in line.lower() or 'screen' in line.lower():
-                  print('D5_REF_FIELD ' + line)
+          print('D5_REF_BASE=' + base_shot)
+          print('D5_REF_INDEXES=' + ','.join(map(str,indexes)))
+          print('D5_REF_CANDIDATES=' + str(len(candidates)))
+          print('D5_REF_SUCCESSES=' + str(successes))
           for line in manifest:
-              print('D5_REF_MEDIA ' + line)
+              if line.startswith('OK\t'):
+                  print('D5_REF_MEDIA ' + line)
           PY
       - name: Upload D5 reference recovery
         uses: actions/upload-artifact@v4
