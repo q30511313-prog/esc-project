@@ -77,13 +77,17 @@ jobs:
               cp "helper/fitface-layout-golden/$production" fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
             fi
           done
-      - name: Stage D4 compiler contract
+      - name: Stage D4 compiler contract and inventory
         shell: bash
         run: |
           set -euo pipefail
           cp helper/fitface-layout-golden/Samsung00049GoldenD4CompilerTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          cp helper/fitface-layout-golden/Samsung00049GoldenD4InventoryTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
           mkdir -p fitface-studio/core/format/src/test/resources/fixtures
           python3 helper/fitface-layout-golden/fetch_face00049_fixture.py fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+      - name: Emit D4 style2 inventory
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon --info :core:format:testDebugUnitTest --tests dev.fitface.studio.core.format.Samsung00049GoldenD4InventoryTest
       - name: Run D4 compiler contract
         id: d4_contract
         working-directory: fitface-studio
