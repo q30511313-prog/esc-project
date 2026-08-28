@@ -91,16 +91,43 @@ jobs:
           rc=${PIPESTATUS[0]}
           diag="$(grep -m1 -E "Unresolved reference 'GoldenD5Compiler'|Fit3FormatException|AssertionError|ComparisonFailure" /tmp/d5-contract.log | sed 's/^[[:space:]]*//' | tr -cd '[:alnum:][:space:]_:.=-' | cut -c1-105)"
           if [[ -z "${diag}" ]]; then
-            diag="no compact exception found"
+            diag="no compact log exception found"
           fi
           echo "diag=${diag}" >> "${GITHUB_OUTPUT}"
           exit "${rc}"
+      - name: Extract D5 JUnit diagnostic
+        id: d5_junit
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY' >> "${GITHUB_OUTPUT}"
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+
+          p = Path('fitface-studio/core/format/build/test-results/testDebugUnitTest/TEST-dev.fitface.studio.core.format.Samsung00049GoldenD5CompilerTest.xml')
+          diag = ''
+          if p.exists():
+              root = ET.parse(p).getroot()
+              failure = root.find('.//failure')
+              error = root.find('.//error')
+              node = failure if failure is not None else error
+              if node is not None:
+                  diag = (node.get('message') or node.text or '').strip()
+              print('D5_JUNIT_XML=' + p.read_text(encoding='utf-8', errors='replace'))
+          if not diag:
+              diag = 'no junit failure diagnostic found'
+          diag = ' '.join(diag.split())
+          diag = ''.join(c for c in diag if c.isprintable())[:115]
+          print('diag=' + diag)
+          PY
       - name: Publish D5 final status
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
           D5_OUTCOME: ${{ steps.d5_contract.outcome }}
-          D5_DIAG: ${{ steps.d5_contract.outputs.diag }}
+          D5_LOG_DIAG: ${{ steps.d5_contract.outputs.diag }}
+          D5_JUNIT_DIAG: ${{ steps.d5_junit.outputs.diag }}
         shell: bash
         run: |
           set -euo pipefail
@@ -110,8 +137,10 @@ jobs:
             state=success
           elif [[ "${D5_OUTCOME}" == "cancelled" ]]; then
             state=error
-          elif [[ -n "${D5_DIAG}" ]]; then
-            description="D5 failure: ${D5_DIAG}"
+          elif [[ -n "${D5_JUNIT_DIAG}" && "${D5_JUNIT_DIAG}" != "no junit failure diagnostic found" ]]; then
+            description="D5 failure: ${D5_JUNIT_DIAG}"
+          elif [[ -n "${D5_LOG_DIAG}" ]]; then
+            description="D5 failure: ${D5_LOG_DIAG}"
           fi
           description="${description:0:140}"
           curl --fail-with-body -sS -L -X POST \
