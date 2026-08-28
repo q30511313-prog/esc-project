@@ -11,6 +11,10 @@ on:
       - '.github/workflows/verify-fitface-golden-d4.yml'
   workflow_dispatch:
 
+concurrency:
+  group: fitface-golden-d4-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   statuses: write
