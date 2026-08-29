@@ -1,5 +1,7 @@
 package dev.fitface.studio.core.format
 
+import java.security.MessageDigest
+
 /**
  * D4 expansion transaction.
  *
@@ -52,6 +54,16 @@ object GoldenD4Compiler {
 
         var current = d3
         var changed = 0
+
+        val plateEdit = FaceEditor.replaceBackgroundInStyle(
+            source = current,
+            entryBasename = STYLE2,
+            width = WIDTH,
+            height = HEIGHT,
+            argb = GoldenD4CleanPlate.argb(),
+        )
+        current = plateEdit.container
+        changed += plateEdit.changedPayloadBytes
 
         fun moveUniqueGlobal(target: Target) {
             val records = FaceRecordParser.scanWidgets(current.entryByBasename(STYLE2))
@@ -119,6 +131,12 @@ object GoldenD4Compiler {
         if (afterBackground.width != WIDTH || afterBackground.height != HEIGHT) {
             throw Fit3FormatException("$STYLE2: D4 background geometry drifted")
         }
+        if (afterBackground.format != IMAGE_RGB565) {
+            throw Fit3FormatException("$STYLE2: D4 clean plate must remain RGB565")
+        }
+        if (backgroundRgb565Sha256(afterStyle2, afterBackground) != GoldenD4CleanPlate.RAW_SHA256) {
+            throw Fit3FormatException("$STYLE2: D4 clean-plate hash did not lock")
+        }
 
         val report = current.validate()
         if (!report.isValid) {
@@ -138,5 +156,15 @@ object GoldenD4Compiler {
             changedPayloadBytes = changed,
             changedStyles = listOf(STYLE2),
         )
+    }
+
+    private fun backgroundRgb565Sha256(entry: ContainerEntry, image: ImageRecord): String {
+        val raw = entry.data.copyOfRange(
+            image.samplesOffset,
+            image.samplesOffset + image.pixelDataSize,
+        )
+        return MessageDigest.getInstance("SHA-256")
+            .digest(raw)
+            .joinToString(separator = "") { "%02x".format(it) }
     }
 }
