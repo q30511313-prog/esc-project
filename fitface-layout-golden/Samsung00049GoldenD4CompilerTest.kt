@@ -8,6 +8,11 @@ import org.junit.Test
 
 /** Locks D4 to style2 / approved 1000028941 artwork while preserving D1+D2 and stock style3. */
 class Samsung00049GoldenD4CompilerTest {
+    private companion object {
+        const val D4_CLEAN_PLATE_SHA256 =
+            "7fe888c2f4536801c916cbdcf026cbad1392a0cd54ff6ad82b00ca2093a34db8"
+    }
+
     @Test
     fun compilesOnlyStyle2OnTopOfApprovedD3Baseline() {
         val pristine = real00049()
@@ -31,6 +36,12 @@ class Samsung00049GoldenD4CompilerTest {
         assertEquals(256, bg.width)
         assertEquals(402, bg.height)
         assertEquals(IMAGE_RGB565, bg.format)
+        assertEquals(256 * 402 * 2, bg.pixelDataSize)
+        val backgroundBytes = style2.data.copyOfRange(
+            bg.samplesOffset,
+            bg.samplesOffset + bg.pixelDataSize,
+        )
+        assertEquals(D4_CLEAN_PLATE_SHA256, sha256(backgroundBytes))
 
         val records = FaceRecordParser.scanWidgets(style2)
         listOf(
@@ -58,6 +69,11 @@ class Samsung00049GoldenD4CompilerTest {
         assertEquals(60, weather.x)
         assertEquals(282, weather.y)
     }
+
+    private fun sha256(bytes: ByteArray): String =
+        java.security.MessageDigest.getInstance("SHA-256")
+            .digest(bytes)
+            .joinToString("") { "%02x".format(it) }
 
     private fun real00049(): Fit3Container {
         val stream = requireNotNull(javaClass.getResourceAsStream("/fixtures/SM-R390_00049_256x402.bin"))
