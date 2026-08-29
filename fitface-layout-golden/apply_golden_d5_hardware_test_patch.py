@@ -2,6 +2,7 @@
 """Wire the final four-style Golden D5 hardware baseline into the dedicated app."""
 
 from pathlib import Path
+import subprocess
 import sys
 
 
@@ -18,6 +19,16 @@ def main() -> None:
         raise SystemExit("usage: apply_golden_d5_hardware_test_patch.py FITFACE_ROOT")
 
     root = Path(sys.argv[1]).resolve()
+    helper = Path(__file__).resolve().parent
+
+    # D5 inherits D4/style2. Generate and verify the approved D4 clean plate before
+    # compiling the D5 production stack so the final APK cannot silently fall back
+    # to the stock style2 background.
+    subprocess.run(
+        [sys.executable, str(helper / "apply_golden_d4_layout.py"), str(root)],
+        check=True,
+    )
+
     repository = root / (
         "core/data/src/main/kotlin/dev/fitface/studio/core/data/"
         "WatchFaceRepositoryImpl.kt"
