@@ -1,0 +1,80 @@
+name: Verify FitFace Golden D5 Session Hook
+
+on:
+  push:
+    branches: [work/fitface-four-style-golden]
+    paths:
+      - 'fitface-layout-golden/apply_golden_d5_hardware_test_patch.py'
+      - 'fitface-layout-golden/GoldenD5HardwareBaseline.kt'
+      - '.github/workflows/verify-fitface-golden-d5-session-hook.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  d5-session-hook:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/fitface-four-style-golden
+          path: helper
+      - uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Publish pending status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS -L -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "{\"state\":\"pending\",\"context\":\"fitface-golden-d5-session-hook\",\"description\":\"D5 session hook compile running\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
+      - name: Apply locked production stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 helper/fitface-build/run_manifest.py helper/fitface-build/v12-foundation-manifest.json --helper-root helper --target-root fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_optical_support.py fitface-studio
+          for production in GoldenAmPmLocaleEditor.kt GoldenSemanticCompiler.kt GoldenWeatherIconCompiler.kt GoldenDateCompiler.kt GoldenWeatherTextEditor.kt GoldenD1Compiler.kt GoldenD1OpticalLock.kt GoldenD1HardwareCorrections.kt GoldenHardwareBaseline.kt GoldenD2Compiler.kt GoldenD2LayoutCompiler.kt GoldenD2HardwareBaseline.kt GoldenD3Compiler.kt GoldenD4Compiler.kt GoldenD5Compiler.kt GoldenD5HardwareBaseline.kt; do
+            cp "helper/fitface-layout-golden/$production" fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          done
+          python3 helper/fitface-layout-golden/apply_golden_layout.py fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_d2_layout.py fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_d5_hardware_test_patch.py fitface-studio
+      - name: Compile D5 session hook
+        id: compile
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :core:data:compileDebugKotlin
+      - name: Publish final status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OUTCOME: ${{ steps.compile.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=failure
+          description="D5 session hook: ${OUTCOME}"
+          if [[ "${OUTCOME}" == "success" ]]; then state=success; fi
+          if [[ "${OUTCOME}" == "cancelled" ]]; then state=error; fi
+          curl --fail-with-body -sS -L -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "{\"state\":\"${state}\",\"context\":\"fitface-golden-d5-session-hook\",\"description\":\"${description}\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
