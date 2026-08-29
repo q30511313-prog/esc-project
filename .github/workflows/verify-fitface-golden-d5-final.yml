@@ -1,0 +1,322 @@
+name: Verify FitFace Golden D5 Final
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/GoldenD5*.kt'
+      - 'fitface-layout-golden/Samsung00049GoldenD5*.kt'
+      - 'fitface-layout-golden/apply_golden_d5_hardware_test_patch.py'
+      - '.github/workflows/verify-fitface-golden-d5-final.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: fitface-golden-d5-final-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  statuses: write
+
+jobs:
+  d5-final-verification:
+    runs-on: ubuntu-latest
+    env:
+      D5_HARDWARE_ARTIFACT_DIR: ${{ github.workspace }}/out
+    steps:
+      - name: Check out helper tree
+        uses: actions/checkout@v4
+        with:
+          ref: work/fitface-four-style-golden
+          path: helper
+
+      - name: Check out pinned upstream
+        uses: actions/checkout@v4
+        with:
+          repository: satvikgosai/fitface-studio
+          ref: 45a9788d3877627fd5301e9ebba36ef6192d7962
+          path: fitface-studio
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Publish D5 final pending status
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl --fail-with-body -sS -L -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "{\"state\":\"pending\",\"context\":\"fitface-golden-d5-final\",\"description\":\"D5 final package verification running\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
+
+      - name: Verify and apply locked Foundation v11/v12 stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 helper/fitface-build/run_manifest.py helper/fitface-build/v12-foundation-manifest.json --helper-root helper --check
+          python3 helper/fitface-build/run_manifest.py helper/fitface-build/v12-foundation-manifest.json --helper-root helper --target-root fitface-studio
+
+      - name: Isolate superseded v10 optical assertion
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/Samsung00003ClockOpticalCompensationTest.kt')
+          t=p.read_text()
+          a='    @Test\n    fun style3ForegroundUsesUnifiedPerceptualMidpointCalibration() {'
+          r='    @org.junit.Ignore("superseded by v11")\n'+a
+          if t.count(a)!=1: raise SystemExit('v10 anchor drift')
+          p.write_text(t.replace(a,r,1))
+          PY
+
+      - name: Apply Golden D1 through D5 production stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 helper/fitface-layout-golden/apply_golden_format_patch.py fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_optical_support.py fitface-studio
+          for production in \
+            GoldenAmPmLocaleEditor.kt \
+            GoldenSemanticCompiler.kt \
+            GoldenWeatherIconCompiler.kt \
+            GoldenDateCompiler.kt \
+            GoldenWeatherTextEditor.kt \
+            GoldenD1Compiler.kt \
+            GoldenD1OpticalLock.kt \
+            GoldenD1HardwareCorrections.kt \
+            GoldenHardwareBaseline.kt \
+            GoldenD2Compiler.kt \
+            GoldenD2LayoutCompiler.kt \
+            GoldenD2HardwareBaseline.kt \
+            GoldenD3Compiler.kt \
+            GoldenD4Compiler.kt \
+            GoldenD5Compiler.kt \
+            GoldenD5HardwareBaseline.kt; do
+            cp "helper/fitface-layout-golden/$production" fitface-studio/core/format/src/main/kotlin/dev/fitface/studio/core/format/
+          done
+          python3 helper/fitface-layout-golden/apply_golden_layout.py fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_d2_layout.py fitface-studio
+          python3 helper/fitface-layout-golden/apply_golden_d5_hardware_test_patch.py fitface-studio
+
+      - name: Lock D5 application identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          gradle=Path('fitface-studio/app/build.gradle.kts')
+          text=gradle.read_text()
+          old='applicationId = "dev.fitface.studio.lcdcomposite.v11"'
+          new='applicationId = "dev.fitface.studio.layoutgolden.d5"'
+          if text.count(old)!=1: raise SystemExit(f'applicationId anchor count={text.count(old)}')
+          gradle.write_text(text.replace(old,new,1))
+          strings=Path('fitface-studio/app/src/main/res/values/strings.xml')
+          text=strings.read_text()
+          pattern=r'(<string\s+name="app_name"\s*>)[^<]*(</string>)'
+          text,count=re.subn(pattern,r'\1FitFace Studio Layout Golden D5\2',text,count=1)
+          if count!=1: raise SystemExit(f'app_name tag count={count}')
+          strings.write_text(text)
+          PY
+          grep -F 'applicationId = "dev.fitface.studio.layoutgolden.d5"' fitface-studio/app/build.gradle.kts
+
+      - name: Compile D5 session hook
+        id: session_compile
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :core:data:compileDebugKotlin
+
+      - name: Stage approved D1 through D5 regression contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for test in \
+            Samsung00049SemanticInventoryTest.kt \
+            Samsung00049PairSequenceRemapTest.kt \
+            Samsung00049SecondsCompilerTest.kt \
+            Samsung00049AmPmCompilerTest.kt \
+            Samsung00049AmPmLocaleExtensionTest.kt \
+            Samsung00049DateCompilerTest.kt \
+            Samsung00049WeekdayCompilerTest.kt \
+            Samsung00049WeatherTextCompilerTest.kt \
+            Samsung00049TempBatteryCompilerTest.kt \
+            Samsung00049MainTimeCompilerTest.kt \
+            Samsung00049WeatherIconPlacementTest.kt \
+            Samsung00049GoldenD1CompilerTest.kt \
+            Samsung00049GoldenLayoutTest.kt \
+            Samsung00049GoldenHardwareBaselineTest.kt \
+            Samsung00049GoldenD2CompilerTest.kt \
+            Samsung00049GoldenD2LayoutTest.kt \
+            Samsung00049GoldenD2HardwareBaselineTest.kt \
+            Samsung00049GoldenD3CompilerTest.kt \
+            Samsung00049GoldenD4CompilerTest.kt \
+            Samsung00049GoldenD5CompilerTest.kt \
+            Samsung00049GoldenD5HardwareBaselineTest.kt \
+            Samsung00049GoldenD5HardwareArtifactTest.kt; do
+            cp "helper/fitface-layout-golden/$test" fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          done
+          cp helper/fitface-opaque-sprite/OpaqueRgb565ResizeTest.kt fitface-studio/core/format/src/test/kotlin/dev/fitface/studio/core/format/
+          mkdir -p fitface-studio/core/format/src/test/resources/fixtures out
+          python3 helper/fitface-layout-golden/fetch_face00049_fixture.py fitface-studio/core/format/src/test/resources/fixtures/SM-R390_00049_256x402.bin
+
+      - name: Run full debug unit-test regression surface
+        id: full_tests
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon testDebugUnitTest
+
+      - name: Re-run final D5 hardware artifact contract explicitly
+        id: artifact_test
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :core:format:testDebugUnitTest --tests dev.fitface.studio.core.format.Samsung00049GoldenD5HardwareArtifactTest --rerun-tasks
+
+      - name: Verify emitted D5 hardware container
+        id: container_verify
+        shell: bash
+        run: |
+          set -euo pipefail
+          container=out/SM-R390_00049_D5_hardware.bin
+          test -f "$container"
+          size=$(stat -c%s "$container")
+          test "$size" -gt 0
+          test "$size" -lt 4194304
+          echo "D5_CONTAINER_BYTES=$size"
+
+      - name: Build D5 style0 weather diagnostic
+        id: weather_diag
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 helper/fitface-layout-golden/build_weather_contact_sheet.py out/SM-R390_00049_D5_hardware.bin out/Golden-D5-style0-weather-contact-sheet.png
+          python3 - <<'PY'
+          import struct
+          from pathlib import Path
+          p=Path('out/Golden-D5-style0-weather-contact-sheet.png')
+          data=p.read_bytes()
+          assert data[:8]==b'\x89PNG\r\n\x1a\n'
+          assert data[12:16]==b'IHDR'
+          width,height=struct.unpack('>II',data[16:24])
+          assert (width,height)==(432,256),(width,height)
+          assert len(data)>1000
+          print(f'D5_STYLE0_WEATHER_PNG_BYTES={len(data)}')
+          PY
+
+      - name: Build D5 installable APK
+        id: apk_build
+        working-directory: fitface-studio
+        run: ./gradlew --no-daemon :app:assembleDebug
+
+      - name: Verify D5 APK identity
+        id: apk_identity
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=fitface-studio/app/build/outputs/apk/debug/app-debug.apk
+          test -f "$apk"
+          test "$(stat -c%s "$apk")" -gt 30000000
+          AAPT="$(find "$ANDROID_HOME/build-tools" -type f -name aapt | sort -V | tail -n1)"
+          "$AAPT" dump badging "$apk" | tee out/Golden-D5-badging.txt
+          grep -F "package: name='dev.fitface.studio.layoutgolden.d5'" out/Golden-D5-badging.txt
+          grep -F "application-label:'FitFace Studio Layout Golden D5'" out/Golden-D5-badging.txt
+          cp "$apk" out/FitFace-Studio-Layout-Golden-D5.apk
+
+      - name: Produce D5 verification report and SHA256 manifest
+        id: report
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd out
+          sha256sum \
+            FitFace-Studio-Layout-Golden-D5.apk \
+            SM-R390_00049_D5_hardware.bin \
+            Golden-D5-style0-weather-contact-sheet.png \
+            Golden-D5-badging.txt \
+            > D5-SHA256SUMS.txt
+          {
+            echo 'FitFace Golden D5 final verification report'
+            echo 'UPSTREAM=45a9788d3877627fd5301e9ebba36ef6192d7962'
+            echo 'STYLE0_ARTWORK=1000028944'
+            echo 'STYLE1_ARTWORK=1000028943'
+            echo 'STYLE2_ARTWORK=1000028941'
+            echo 'STYLE3_ARTWORK=1000028942'
+            echo 'APPLICATION_ID=dev.fitface.studio.layoutgolden.d5'
+            echo 'D1_HARDWARE_PLATE_RGB565_SHA256=8f4ab8d5f11f13518ff80541bde6aff747a90d46c27a226f6c77175f5ae5084b'
+            echo 'D2_PLATE_RGB565_SHA256=3718133cdd95f45155706222f5d402623aa62d0fe941b33d320090f26aa72b64'
+            echo "CONTAINER_BYTES=$(stat -c%s SM-R390_00049_D5_hardware.bin)"
+            echo 'CONTAINER_REPARSE=PASS'
+            echo 'CONTAINER_VALIDATE_CRC=PASS'
+            echo 'STYLE0_D1_HARDWARE_BASELINE=PASS'
+            echo 'STYLE1_D2_LOGICAL=PASS'
+            echo 'STYLE2_D4_LOGICAL=PASS'
+            echo 'STYLE3_D5_LOGICAL=PASS'
+            echo 'STYLE1_2_3_PRESERVED_BY_D1_HARDWARE_PASS=PASS'
+            echo 'D5_SESSION_HOOK_COMPILE=PASS'
+            echo 'FULL_DEBUG_UNIT_REGRESSION=PASS'
+            echo 'APK_ASSEMBLE=PASS'
+            echo 'APK_IDENTITY=PASS'
+            echo 'STYLE0_WEATHER_DIAGNOSTIC=PASS'
+            echo 'REAL_HARDWARE_VISUAL_VALIDATION=PENDING'
+            echo
+            cat D5-SHA256SUMS.txt
+          } > Golden-D5-verification-report.txt
+          sha256sum Golden-D5-verification-report.txt >> D5-SHA256SUMS.txt
+          cat Golden-D5-verification-report.txt
+          cat D5-SHA256SUMS.txt
+
+      - name: Upload D5 verification artifacts
+        id: upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitFace-Golden-D5-Verification
+          path: |
+            out/FitFace-Studio-Layout-Golden-D5.apk
+            out/SM-R390_00049_D5_hardware.bin
+            out/Golden-D5-style0-weather-contact-sheet.png
+            out/Golden-D5-badging.txt
+            out/Golden-D5-verification-report.txt
+            out/D5-SHA256SUMS.txt
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Publish D5 final status
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SESSION: ${{ steps.session_compile.outcome }}
+          TESTS: ${{ steps.full_tests.outcome }}
+          ARTIFACT: ${{ steps.artifact_test.outcome }}
+          CONTAINER: ${{ steps.container_verify.outcome }}
+          WEATHER: ${{ steps.weather_diag.outcome }}
+          APK: ${{ steps.apk_build.outcome }}
+          IDENTITY: ${{ steps.apk_identity.outcome }}
+          REPORT: ${{ steps.report.outcome }}
+          UPLOAD: ${{ steps.upload.outcome }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          state=success
+          description='D5 final package verification: success'
+          for outcome in "$SESSION" "$TESTS" "$ARTIFACT" "$CONTAINER" "$WEATHER" "$APK" "$IDENTITY" "$REPORT" "$UPLOAD"; do
+            if [[ "$outcome" != "success" ]]; then
+              state=failure
+              description="D5 final failed: session=$SESSION tests=$TESTS artifact=$ARTIFACT apk=$APK identity=$IDENTITY upload=$UPLOAD"
+              break
+            fi
+          done
+          description="${description:0:140}"
+          curl --fail-with-body -sS -L -X POST \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer ${GH_TOKEN}" \
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d "{\"state\":\"${state}\",\"context\":\"fitface-golden-d5-final\",\"description\":\"${description}\",\"target_url\":\"${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}\"}"
