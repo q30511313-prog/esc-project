@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
-"""Compare Galaxy Store thumbnail tuple with device-proven sampler bytes."""
+"""Compare Samsung preview filename tuples with device-proven install sampler bytes."""
 
 from __future__ import annotations
 
 import base64
 import hashlib
+import io
 import json
 from pathlib import Path
 import time
 import urllib.parse
 import xml.etree.ElementTree as ET
+import zipfile
 
 import fetch_face00049_fixture as stock
 
 FACES = ("00046", "00049", "00106")
 
 
-def metadata_for(face: str) -> dict[str, object]:
-    app_id = f"com.samsung.fit3watchface.sm_r390_{face.lstrip('0') or '0'}"
-    # Samsung's product IDs are zero-padded to four digits for the known Fit3 catalogue.
+def package_for(face: str) -> dict[str, object]:
     app_id = f"com.samsung.fit3watchface.sm_r390_{int(face):04d}"
     digest = hashlib.sha1((app_id + stock.HASH_SUFFIX).encode("latin1")).digest()
     params = {
@@ -46,18 +46,28 @@ def metadata_for(face: str) -> dict[str, object]:
     if app is None:
         raise SystemExit(f"{face}: no appInfo")
     values = {child.tag: (child.text or "").strip() for child in app}
+    if values.get("resultCode") != "1" or not values.get("downloadURI"):
+        raise SystemExit(f"{face}: store result={values.get('resultCode')}")
+    package = stock.request_bytes(values["downloadURI"], limit=stock.MAX_PACKAGE_BYTES)
+    with zipfile.ZipFile(io.BytesIO(package)) as archive:
+        info = json.loads(archive.read("assets/bandface_info.json").decode("utf-8"))["info"]
+        thumbnail = info.get("thumbnail")
+        previews = [item.get("__text") for item in info.get("preview", [])]
+    parts = Path(thumbnail).stem.split("_") if thumbnail else []
     return {
         "face": face,
         "app_id": app_id,
-        "resultCode": values.get("resultCode"),
         "versionName": values.get("versionName"),
-        "downloadURI_present": bool(values.get("downloadURI")),
+        "thumbnail": thumbnail,
+        "thumbnail_numeric_tail": parts[-2:] if len(parts) >= 2 else [],
+        "preview_files": previews,
+        "package_sha256": hashlib.sha256(package).hexdigest(),
     }
 
 
 def main() -> None:
     out = Path("sampler-metadata.json")
-    rows = [metadata_for(face) for face in FACES]
+    rows = [package_for(face) for face in FACES]
     out.write_text(json.dumps(rows, indent=2) + "\n", encoding="utf-8")
     print(out.read_text())
 
