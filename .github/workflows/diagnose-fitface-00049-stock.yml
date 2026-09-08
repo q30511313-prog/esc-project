@@ -1,0 +1,39 @@
+name: Diagnose FitFace 00049 Stock Package
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/diagnose_face00049_stock.py'
+      - '.github/workflows/diagnose-fitface-00049-stock.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  stock-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out helper tree
+        uses: actions/checkout@v4
+        with:
+          ref: work/fitface-four-style-golden
+
+      - name: Fetch 00049 vendor package diagnostics
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out-stock
+          python3 fitface-layout-golden/diagnose_face00049_stock.py out-stock
+          cat out-stock/stock-diagnostic.json
+          cat out-stock/bandface_info.json
+
+      - name: Upload 00049 stock diagnostics
+        uses: actions/upload-artifact@v4
+        with:
+          name: FitFace-00049-Stock-Diagnostic
+          path: out-stock/
+          if-no-files-found: error
+          retention-days: 30
