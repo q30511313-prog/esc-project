@@ -1,0 +1,34 @@
+name: Diagnose FitFace Sampler Tuple
+
+on:
+  push:
+    branches:
+      - work/fitface-four-style-golden
+    paths:
+      - 'fitface-layout-golden/diagnose_sampler_metadata.py'
+      - '.github/workflows/diagnose-fitface-sampler.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  sampler-diagnostic:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: work/fitface-four-style-golden
+      - name: Probe device-proven faces and 00049
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd fitface-layout-golden
+          python3 diagnose_sampler_metadata.py
+          cp sampler-metadata.json ../sampler-metadata.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: FitFace-Sampler-Diagnostic
+          path: sampler-metadata.json
+          if-no-files-found: error
+          retention-days: 30
