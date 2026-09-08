@@ -45,11 +45,25 @@ def main() -> None:
     replace_once(
         repository,
         "        val original = Fit3Container.parse(apk.binary)\n"
-        "        val current = editedBinPath\n",
+        "        val current = editedBinPath\n"
+        "            ?.let(::File)\n"
+        "            ?.takeIf(File::isFile)\n"
+        "            ?.readBytes()\n"
+        "            ?.let(Fit3Container::parse)\n"
+        "            ?: original\n",
         "        val stock = Fit3Container.parse(apk.binary)\n"
         "        val original = GoldenD5HardwareBaseline.resolve(apk.faceId, stock)\n"
-        "        val current = editedBinPath\n",
-        "loadSession D5 baseline",
+        "        val persisted = editedBinPath\n"
+        "            ?.let(::File)\n"
+        "            ?.takeIf(File::isFile)\n"
+        "            ?.readBytes()\n"
+        "            ?.let(Fit3Container::parse)\n"
+        "        val current = GoldenD5HardwareBaseline.currentOrBaseline(\n"
+        "            faceId = apk.faceId,\n"
+        "            baseline = original,\n"
+        "            persisted = persisted,\n"
+        "        )\n",
+        "loadSession D5 baseline + stale persisted migration",
     )
 
     print("Golden D5 four-style hardware session baseline patch applied")
