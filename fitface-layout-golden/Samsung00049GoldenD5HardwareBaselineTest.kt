@@ -32,9 +32,53 @@ class Samsung00049GoldenD5HardwareBaselineTest {
     }
 
     @Test
+    fun discardsPersistedPreCleanPlateContainerAfterApkUpgrade() {
+        val pristine = real00049()
+        val currentBaseline = GoldenD5HardwareBaseline.resolve("00049", pristine)
+        // This reproduces the persisted project shape from the pre-fix APK: D3 owns
+        // style0/style1 while style2 still carries the stock background.
+        val stalePersisted = GoldenD3Compiler.compile(pristine).container
+
+        val migrated = GoldenD5HardwareBaseline.currentOrBaseline(
+            faceId = "00049",
+            baseline = currentBaseline,
+            persisted = stalePersisted,
+        )
+
+        assertArrayEquals(
+            currentBaseline.entryByBasename("style2.bin").data,
+            migrated.entryByBasename("style2.bin").data,
+        )
+        assertTrue(GoldenD5HardwareBaseline.hasCurrentD4Plate(migrated))
+    }
+
+    @Test
+    fun preservesPersistedContainerThatAlreadyCarriesCurrentD4Plate() {
+        val pristine = real00049()
+        val currentBaseline = GoldenD5HardwareBaseline.resolve("00049", pristine)
+
+        val selected = GoldenD5HardwareBaseline.currentOrBaseline(
+            faceId = "00049",
+            baseline = currentBaseline,
+            persisted = currentBaseline,
+        )
+
+        assertSame(currentBaseline, selected)
+        assertTrue(GoldenD5HardwareBaseline.hasCurrentD4Plate(selected))
+    }
+
+    @Test
     fun leavesNonTargetFaceByIdentity() {
         val pristine = real00049()
         assertSame(pristine, GoldenD5HardwareBaseline.resolve("00048", pristine))
+        assertSame(
+            pristine,
+            GoldenD5HardwareBaseline.currentOrBaseline(
+                faceId = "00048",
+                baseline = pristine,
+                persisted = pristine,
+            ),
+        )
     }
 
     private fun real00049(): Fit3Container {
