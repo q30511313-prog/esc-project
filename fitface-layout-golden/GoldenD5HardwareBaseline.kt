@@ -1,5 +1,7 @@
 package dev.fitface.studio.core.format
 
+import java.security.MessageDigest
+
 /** Final four-style hardware baseline: approved D1 style0 plus D5 logical styles1-3. */
 object GoldenD5HardwareBaseline {
     const val TARGET_FACE_ID = "00049"
@@ -34,4 +36,43 @@ object GoldenD5HardwareBaseline {
         }
         return hardware
     }
+
+    /**
+     * Chooses a persisted project only when it belongs to the current D5 baseline family.
+     *
+     * The D5 validation APK keeps its Android application id across upgrades, so an
+     * edited.bin written by the pre-clean-plate build can survive an APK update and would
+     * otherwise override [resolve]. That stale container is exactly the hardware symptom
+     * observed on style2: the watch keeps rendering the old green stock plate even though
+     * the newly-built APK contains the approved cyan D4 plate.
+     */
+    fun currentOrBaseline(
+        faceId: String,
+        baseline: Fit3Container,
+        persisted: Fit3Container?,
+    ): Fit3Container {
+        if (persisted == null) return baseline
+        if (faceId != TARGET_FACE_ID) return persisted
+        return if (hasCurrentD4Plate(persisted)) persisted else baseline
+    }
+
+    /** Fingerprint that distinguishes the post-fix D4/style2 family from stale projects. */
+    fun hasCurrentD4Plate(container: Fit3Container): Boolean = runCatching {
+        val style2 = container.entryByBasename("style2.bin")
+        val background = FaceRecordParser.backgroundImage(style2) ?: return@runCatching false
+        if (background.width != GoldenD4CleanPlate.WIDTH ||
+            background.height != GoldenD4CleanPlate.HEIGHT ||
+            background.format != IMAGE_RGB565
+        ) {
+            return@runCatching false
+        }
+        val raw = style2.data.copyOfRange(
+            background.samplesOffset,
+            background.samplesOffset + background.pixelDataSize,
+        )
+        val digest = MessageDigest.getInstance("SHA-256")
+            .digest(raw)
+            .joinToString(separator = "") { "%02x".format(it) }
+        digest == GoldenD4CleanPlate.RAW_SHA256
+    }.getOrDefault(false)
 }
